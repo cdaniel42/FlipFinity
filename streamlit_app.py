@@ -114,7 +114,7 @@ if all_vars_valid:
     profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
 
     # 10. Calculate Margin (based on new Total Project Cost)
-    margin_percent = (profit_before_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
+    margin_percent = (profit_after_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
 
     # --- Display Rows --- (Using the newly calculated values)
     colA, colB = st.sidebar.columns(2)
@@ -130,7 +130,7 @@ if all_vars_valid:
     col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€") # Step 5
 
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.1f} %") # Step 10
+    col5.metric(label="Margin (after Tax)", value=f"{margin_percent:.1f} %") # Step 10
     col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Step 9
 else:
     # Placeholder display
