@@ -179,7 +179,7 @@ renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)
 land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax')
 notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy)", value=1.5, step=0.1, min_value=0.0, key='disp_notary')
 agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_buy')
-agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_sell')
+agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell)", value=0, step=0.1, min_value=0.0, key='disp_agent_sell')
 
 st.sidebar.subheader("Project Timing & Finance")
 project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1, key='disp_duration')
