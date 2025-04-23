@@ -11,7 +11,7 @@ import plotly.io as pio
 
 # Import simulation and visualization functions from other modules
 from simulation import run_monte_carlo_simulations
-from visualization import plot_asset_growth, plot_monthly_gains
+from visualization import plot_asset_growth, plot_monthly_gains, plot_monthly_revenue
 
 app = Flask(__name__)
 
@@ -87,10 +87,12 @@ def simulate():
         print("Generating plots...")
         asset_growth_fig = plot_asset_growth(summary_stats)
         monthly_gains_fig = plot_monthly_gains(summary_stats)
+        revenue_fig = plot_monthly_revenue(summary_stats)
 
         # Convert plots to JSON
         asset_plot_json = pio.to_json(asset_growth_fig)
         gains_plot_json = pio.to_json(monthly_gains_fig)
+        revenue_plot_json = pio.to_json(revenue_fig)
         print("Plots generated.")
     except Exception as e:
         print(f"Error during plot generation: {e}")
@@ -109,6 +111,7 @@ def simulate():
         "summary_text": summary_text,
         "asset_growth_plot_json": asset_plot_json,
         "monthly_gains_plot_json": gains_plot_json,
+        "revenue_plot_json": revenue_plot_json,
         # Optionally include summary_stats DataFrame as JSON/dict
         # "summary_stats_json": summary_stats.reset_index().to_json(orient="records")
     }

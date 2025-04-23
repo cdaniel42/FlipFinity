@@ -115,6 +115,59 @@ def plot_monthly_gains(summary_stats: pd.DataFrame) -> go.Figure:
 
     return fig
 
+def plot_monthly_revenue(summary_stats: pd.DataFrame) -> go.Figure:
+    """
+    Generates a Plotly figure showing the mean monthly revenue over time
+    with a shaded region representing +/- 1 standard deviation.
+
+    Args:
+        summary_stats: DataFrame containing aggregated simulation results,
+                       including 'Revenue_mean' and 'Revenue_std' columns,
+                       indexed by month.
+
+    Returns:
+        A Plotly graph object (go.Figure).
+    """
+    fig = go.Figure()
+
+    # Ensure standard deviation is non-negative
+    summary_stats['Revenue_std_non_negative'] = summary_stats['Revenue_std'].fillna(0).clip(lower=0)
+
+    # Calculate upper and lower bounds
+    upper_bound = summary_stats['Revenue_mean'] + summary_stats['Revenue_std_non_negative']
+    lower_bound = summary_stats['Revenue_mean'] - summary_stats['Revenue_std_non_negative']
+
+    # Add shaded area
+    x_months = summary_stats.index.tolist()
+    fig.add_trace(go.Scatter(
+        x=x_months + x_months[::-1],
+        y=upper_bound.tolist() + lower_bound[::-1].tolist(),
+        fill='toself',
+        fillcolor='rgba(255, 165, 0, 0.2)', # Example color (orange)
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        showlegend=False,
+        name='Std Dev Range'
+    ))
+
+    # Add mean line
+    fig.add_trace(go.Scatter(
+        x=x_months,
+        y=summary_stats['Revenue_mean'],
+        mode='lines',
+        line=dict(color='rgb(255, 165, 0)'), # Example color (orange)
+        name='Mean Monthly Revenue'
+    ))
+
+    fig.update_layout(
+        title='Simulated Monthly Revenue Over Time',
+        xaxis_title='Month',
+        yaxis_title='Monthly Revenue (k€)',
+        hovermode="x unified"
+    )
+
+    return fig
+
 # Example Usage (for testing with dummy data)
 if __name__ == '__main__':
     # Create dummy summary_stats data similar to what simulation.py produces
@@ -123,7 +176,9 @@ if __name__ == '__main__':
         'Assets_mean': [60 + i * 1.5 + np.random.randn() * i * 0.1 for i in months],
         'Assets_std': [max(0, 5 + i * 0.5 + np.random.randn() * i * 0.05) for i in months],
         'Gains_mean': [1.5 + np.random.randn() * 0.5 for i in months],
-        'Gains_std': [max(0, 1 + np.random.randn() * 0.2) for i in months]
+        'Gains_std': [max(0, 1 + np.random.randn() * 0.2) for i in months],
+        'Revenue_mean': [10 + i*0.2 + np.random.randn() * 2 for i in months], # Dummy revenue
+        'Revenue_std': [max(0, 2 + np.random.randn() * 0.5) for i in months]  # Dummy revenue std
     }
     dummy_summary_stats = pd.DataFrame(dummy_data, index=pd.Index(months, name='Month'))
 
@@ -139,4 +194,10 @@ if __name__ == '__main__':
     gain_fig = plot_monthly_gains(dummy_summary_stats)
     print("\nMonthly Gains Plot JSON (first 500 chars):")
     print(gain_fig.to_json()[:500] + "...")
-    # gain_fig.show() # Uncomment to display plot if running locally 
+    # gain_fig.show() # Uncomment to display plot if running locally
+
+    # Generate and show Monthly Revenue plot
+    revenue_fig = plot_monthly_revenue(dummy_summary_stats)
+    print("\nMonthly Revenue Plot JSON (first 500 chars):")
+    print(revenue_fig.to_json()[:500] + "...")
+    # revenue_fig.show() # Uncomment to display plot if running locally 

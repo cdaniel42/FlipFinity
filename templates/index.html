@@ -7,73 +7,200 @@
     <!-- Include Plotly.js -->
     <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        .container { display: flex; gap: 30px; }
-        .inputs { width: 300px; }
-        .results { flex-grow: 1; }
-        label { display: block; margin-top: 10px; }
-        input[type="number"] { width: 90%; padding: 5px; }
-        button { margin-top: 20px; padding: 10px 15px; cursor: pointer; }
-        #summary-output { margin-top: 20px; font-weight: bold; }
-        .plot { margin-top: 20px; min-height: 400px; }
-        #loading { display: none; margin-top: 15px; color: blue; }
-        #error-output { display: none; margin-top: 15px; color: red; }
+        :root {
+            --primary-color: #005f73;
+            --secondary-color: #0a9396;
+            --light-gray: #f8f9fa;
+            --gray: #e9ecef;
+            --dark-gray: #6c757d;
+            --text-color: #212529;
+            --border-radius: 5px;
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--light-gray);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        h1 { text-align: center; margin-bottom: 2rem; }
+        h2 { border-bottom: 2px solid var(--secondary-color); padding-bottom: 0.5rem; }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .content-wrapper { display: flex; gap: 40px; flex-wrap: wrap; }
+        .inputs-column { flex: 1; min-width: 320px; }
+        .results-column { flex: 2; min-width: 400px; }
+
+        fieldset {
+            border: 1px solid var(--gray);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        legend { font-weight: bold; color: var(--primary-color); padding: 0 5px; }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+
+        input[type="number"] {
+            width: calc(100% - 16px); /* Account for padding */
+            padding: 8px;
+            border: 1px solid var(--gray);
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 2px rgba(10, 147, 150, 0.2);
+        }
+
+        #calculated-values {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background-color: var(--light-gray);
+            border: 1px solid var(--gray);
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+        #calculated-values strong { color: var(--primary-color); }
+        #calculated-values span span { font-weight: bold; }
+
+        button[type="submit"] {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button[type="submit"]:hover {
+            background-color: var(--primary-color);
+        }
+
+        #summary-output { margin-top: 0; margin-bottom: 20px; font-weight: bold; font-size: 1.1rem;}
+        .plot { margin-bottom: 20px; min-height: 400px; border: 1px solid var(--gray); border-radius: var(--border-radius); overflow: hidden; }
+
+        #loading {
+            display: none;
+            margin-top: 15px;
+            color: var(--secondary-color);
+            font-weight: bold;
+            text-align: center;
+        }
+        #error-output {
+            display: none;
+            margin-top: 15px;
+            color: #dc3545; /* Bootstrap danger color */
+            background-color: #f8d7da;
+            border: 1px solid #f5c2c7;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
-    <h1>FlipFinity Business Simulator</h1>
+    <div class="main-container">
+        <h1>FlipFinity Business Simulator</h1>
 
-    <div class="container">
-        <div class="inputs">
-            <h2>Input Parameters</h2>
-            <form id="sim-form">
-                <label for="starting_capital_ke">Starting Capital (k€):</label>
-                <input type="number" id="starting_capital_ke" name="starting_capital_ke" value="60" step="any" required>
+        <div class="content-wrapper">
+            <div class="inputs-column">
+                <form id="sim-form">
+                    <fieldset>
+                        <legend>Project Setup</legend>
+                        <label for="sqm_buy_value_ke">SqM Buy Value (k€/sqm):</label>
+                        <input type="number" id="sqm_buy_value_ke" name="sqm_buy_value_ke" value="1.5" step="any" required>
 
-                <label for="sqm_buy_value_ke">SqM Buy Value (k€/sqm):</label>
-                <input type="number" id="sqm_buy_value_ke" name="sqm_buy_value_ke" value="1.5" step="any" required>
+                        <label for="sqm_sell_value_ke">SqM Sell Value (k€/sqm):</label>
+                        <input type="number" id="sqm_sell_value_ke" name="sqm_sell_value_ke" value="2.0" step="any" required>
 
-                <label for="sqm_sell_value_ke">SqM Sell Value (k€/sqm):</label>
-                <input type="number" id="sqm_sell_value_ke" name="sqm_sell_value_ke" value="2.0" step="any" required>
+                        <label for="total_sqm">Total SqM per Project:</label>
+                        <input type="number" id="total_sqm" name="total_sqm" value="100" step="any" required>
 
-                <label for="total_sqm">Total SqM per Project:</label>
-                <input type="number" id="total_sqm" name="total_sqm" value="100" step="any" required>
+                        <label for="project_duration_months">Project Duration (months):</label>
+                        <input type="number" id="project_duration_months" name="project_duration_months" value="9" step="1" min="1" required>
+                    </fieldset>
 
-                <label for="project_duration_months">Project Duration (months):</label>
-                <input type="number" id="project_duration_months" name="project_duration_months" value="9" step="1" required>
+                    <fieldset>
+                        <legend>Financials</legend>
+                        <label for="starting_capital_ke">Starting Capital (k€):</label>
+                        <input type="number" id="starting_capital_ke" name="starting_capital_ke" value="60" step="any" required>
 
-                <label for="financing_ratio_percent">Financing Ratio (%):</label>
-                <input type="number" id="financing_ratio_percent" name="financing_ratio_percent" value="90" step="any" min="0" max="100" required>
+                        <label for="financing_ratio_percent">Financing Ratio (%):</label>
+                        <input type="number" id="financing_ratio_percent" name="financing_ratio_percent" value="90" step="any" min="0" max="100" required>
 
-                <label for="interest_rate_percent">Interest Rate (% annual):</label>
-                <input type="number" id="interest_rate_percent" name="interest_rate_percent" value="5" step="any" required>
+                        <label for="interest_rate_percent">Interest Rate (% annual):</label>
+                        <input type="number" id="interest_rate_percent" name="interest_rate_percent" value="5" step="any" min="0" required>
 
-                <label for="tax_rate_percent">Tax Rate (%):</label>
-                <input type="number" id="tax_rate_percent" name="tax_rate_percent" value="29.125" step="any" min="0" max="100" required>
+                        <label for="tax_rate_percent">Tax Rate (%):</label>
+                        <input type="number" id="tax_rate_percent" name="tax_rate_percent" value="29.125" step="any" min="0" max="100" required>
 
-                <label for="duration_jitter_percent">Duration Jitter (% +/-):</label>
-                <input type="number" id="duration_jitter_percent" name="duration_jitter_percent" value="10" step="any" min="0" required>
+                        <div id="calculated-values">
+                            <strong>Calculated per Project:</strong><br>
+                            <span>Total Buy Value: <span id="calc-buy-value">...</span> k€</span><br>
+                            <span>Total Sell Value: <span id="calc-sell-value">...</span> k€</span><br>
+                            <span>Margin: <span id="calc-margin">...</span> %</span>
+                        </div>
+                    </fieldset>
 
-                <label for="sell_price_jitter_percent">Sell Price Jitter (% +/-):</label>
-                <input type="number" id="sell_price_jitter_percent" name="sell_price_jitter_percent" value="5" step="any" min="0" required>
+                    <fieldset>
+                        <legend>Simulation Parameters</legend>
+                        <label for="duration_jitter_percent">Duration Jitter (% +/-):</label>
+                        <input type="number" id="duration_jitter_percent" name="duration_jitter_percent" value="10" step="any" min="0" required>
 
-                <label for="total_simulation_months">Total Simulation Months:</label>
-                <input type="number" id="total_simulation_months" name="total_simulation_months" value="60" step="1" required>
+                        <label for="sell_price_jitter_percent">Sell Price Jitter (% +/-):</label>
+                        <input type="number" id="sell_price_jitter_percent" name="sell_price_jitter_percent" value="10" step="any" min="0" required>
 
-                <label for="num_simulations">Number of Simulations:</label>
-                <input type="number" id="num_simulations" name="num_simulations" value="500" step="1" required>
+                        <label for="total_simulation_months">Total Simulation Months:</label>
+                        <input type="number" id="total_simulation_months" name="total_simulation_months" value="60" step="1" min="1" required>
 
-                <button type="submit">Run Simulation</button>
-                <div id="loading">Running simulation...</div>
-                <div id="error-output"></div>
-            </form>
-        </div>
+                        <label for="num_simulations">Number of Simulations:</label>
+                        <input type="number" id="num_simulations" name="num_simulations" value="500" step="1" min="1" required>
+                    </fieldset>
 
-        <div class="results">
-            <h2>Results</h2>
-            <div id="summary-output"></div>
-            <div id="asset-plot" class="plot"></div>
-            <div id="gains-plot" class="plot"></div>
+                    <button type="submit">Run Simulation</button>
+                    <div id="loading">Running simulation... Please wait.</div>
+                    <div id="error-output"></div>
+                </form>
+            </div>
+
+            <div class="results-column">
+                <h2>Results</h2>
+                <div id="summary-output"></div>
+                <div id="asset-plot" class="plot"></div>
+                <div id="gains-plot" class="plot"></div>
+                <div id="revenue-plot" class="plot"></div>
+            </div>
         </div>
     </div>
 
@@ -82,27 +209,61 @@
         const summaryOutput = document.getElementById('summary-output');
         const assetPlotDiv = document.getElementById('asset-plot');
         const gainsPlotDiv = document.getElementById('gains-plot');
+        const revenuePlotDiv = document.getElementById('revenue-plot');
         const loadingDiv = document.getElementById('loading');
         const errorOutput = document.getElementById('error-output');
+        const buyValueInput = document.getElementById('sqm_buy_value_ke');
+        const sellValueInput = document.getElementById('sqm_sell_value_ke');
+        const totalSqmInput = document.getElementById('total_sqm');
+        const calcBuyValueSpan = document.getElementById('calc-buy-value');
+        const calcSellValueSpan = document.getElementById('calc-sell-value');
+        const calcMarginSpan = document.getElementById('calc-margin');
+
+        function updateCalculatedValues() {
+            if (!buyValueInput.value || !sellValueInput.value || !totalSqmInput.value) {
+                calcBuyValueSpan.textContent = '...';
+                calcSellValueSpan.textContent = '...';
+                calcMarginSpan.textContent = '...';
+                return;
+            }
+            const buyValue = parseFloat(buyValueInput.value) || 0;
+            const sellValue = parseFloat(sellValueInput.value) || 0;
+            const totalSqm = parseFloat(totalSqmInput.value) || 0;
+
+            const totalBuy = buyValue * totalSqm;
+            const totalSell = sellValue * totalSqm;
+            let margin = 0;
+            if (totalBuy > 0) {
+                margin = ((totalSell - totalBuy) / totalBuy) * 100;
+            }
+
+            calcBuyValueSpan.textContent = totalBuy.toFixed(2);
+            calcSellValueSpan.textContent = totalSell.toFixed(2);
+            calcMarginSpan.textContent = margin.toFixed(2);
+        }
+
+        buyValueInput.addEventListener('input', updateCalculatedValues);
+        sellValueInput.addEventListener('input', updateCalculatedValues);
+        totalSqmInput.addEventListener('input', updateCalculatedValues);
+
+        document.addEventListener('DOMContentLoaded', updateCalculatedValues);
 
         form.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
 
-            // Clear previous results and errors
             summaryOutput.textContent = '';
             assetPlotDiv.innerHTML = '';
             gainsPlotDiv.innerHTML = '';
+            revenuePlotDiv.innerHTML = '';
             errorOutput.textContent = '';
             errorOutput.style.display = 'none';
-            loadingDiv.style.display = 'block'; // Show loading indicator
+            loadingDiv.style.display = 'block';
 
             const formData = new FormData(form);
             const data = {};
-            // Convert FormData to plain object and parse numbers
             for (const [key, value] of formData.entries()) {
-                // Check if value is numeric before parsing
                 const numValue = parseFloat(value);
-                data[key] = isNaN(numValue) ? value : numValue;
+                data[key] = isNaN(numValue) || value.trim() === '' ? value : numValue;
             }
 
             try {
@@ -114,7 +275,7 @@
                     body: JSON.stringify(data),
                 });
 
-                loadingDiv.style.display = 'none'; // Hide loading indicator
+                loadingDiv.style.display = 'none';
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -123,18 +284,23 @@
 
                 const results = await response.json();
 
-                // Display summary
                 summaryOutput.textContent = results.summary_text;
 
-                // Render plots
-                const assetPlotData = JSON.parse(results.asset_growth_plot_json);
-                Plotly.newPlot('asset-plot', assetPlotData.data, assetPlotData.layout);
-
-                const gainsPlotData = JSON.parse(results.monthly_gains_plot_json);
-                Plotly.newPlot('gains-plot', gainsPlotData.data, gainsPlotData.layout);
+                if (results.asset_growth_plot_json) {
+                    const assetPlotData = JSON.parse(results.asset_growth_plot_json);
+                    Plotly.newPlot(assetPlotDiv, assetPlotData.data, assetPlotData.layout);
+                }
+                if (results.monthly_gains_plot_json) {
+                    const gainsPlotData = JSON.parse(results.monthly_gains_plot_json);
+                    Plotly.newPlot(gainsPlotDiv, gainsPlotData.data, gainsPlotData.layout);
+                }
+                if (results.revenue_plot_json) {
+                    const revenuePlotData = JSON.parse(results.revenue_plot_json);
+                    Plotly.newPlot(revenuePlotDiv, revenuePlotData.data, revenuePlotData.layout);
+                }
 
             } catch (error) {
-                loadingDiv.style.display = 'none'; // Hide loading indicator on error too
+                loadingDiv.style.display = 'none';
                 console.error('Simulation Error:', error);
                 errorOutput.textContent = `Error: ${error.message}`;
                 errorOutput.style.display = 'block';
