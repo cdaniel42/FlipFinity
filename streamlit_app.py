@@ -66,17 +66,17 @@ total_sqm = st.sidebar.number_input("Total SqM per Project", value=100.0, step=1
 renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=500.0, step=50.0, min_value=0.0, key='disp_reno_val', help="Enter renovation cost in EURO per square meter.")
 project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1)
 
-st.sidebar.subheader("Project Timing & Finance") # Combined Finance & Timing
+st.sidebar.subheader("Project Timing & Finance") # Renamed Subheader
 starting_capital_ke = st.sidebar.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0)
 financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1)
 interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0)
 TAX_RATE_FIXED = 29.0
 st.sidebar.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}")
 # Add Hausgeld input
-hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=150.0, step=10.0, min_value=0.0)
+hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld') # Default 400, Added key
 
 st.sidebar.subheader("Transaction Costs (%)") # New Subheader
-land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy Value)", value=5.0, step=0.1, min_value=0.0)
+land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy Value)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax') # Default 6.5, Added key
 notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy Value)", value=1.5, step=0.1, min_value=0.0)
 agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy Value)", value=3.57, step=0.1, min_value=0.0)
 agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell Value)", value=3.57, step=0.1, min_value=0.0)
