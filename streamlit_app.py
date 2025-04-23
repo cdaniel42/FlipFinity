@@ -70,64 +70,68 @@ if all_vars_valid and (st.session_state['disp_sqm_val'] <= 0 or st.session_state
     all_vars_valid = False
 
 if all_vars_valid:
-    # Basic calculations
-    buy_value_ke = sqm_buy_value_ke_disp * total_sqm_disp
-    sell_value_ke = sqm_sell_value_ke_disp * total_sqm_disp
-    reno_cost_ke = (renovation_cost_per_sqm_eur_disp / 1000.0) * total_sqm_disp
+    # 1. Base Values
+    buy_value_ke = st.session_state['disp_buy_val'] * st.session_state['disp_sqm_val']
+    sell_value_ke = st.session_state['disp_sell_val'] * st.session_state['disp_sqm_val']
+    reno_cost_ke = (st.session_state['disp_reno_val'] / 1000.0) * st.session_state['disp_sqm_val']
 
-    # Purchase and Sale Transaction Costs
+    # 2. Transaction Fees
     purchase_tx_costs_ke = buy_value_ke * (
-        (land_transfer_tax_percent_disp + notary_fee_percent_disp + agent_fee_purchase_percent_disp) / 100.0
+        (st.session_state['disp_land_tax'] + st.session_state['disp_notary'] + st.session_state['disp_agent_buy']) / 100.0
     )
-    sale_tx_costs_ke = sell_value_ke * (agent_fee_sale_percent_disp / 100.0)
+    sale_tx_costs_ke = sell_value_ke * (st.session_state['disp_agent_sell'] / 100.0)
 
-    # Total Project Upfront Cost (for financing base and display)
-    total_project_cost_ke_display = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke
-
-    # Dependencies for estimates
+    # 3. Estimate Financing and Interest
     financing_ratio_disp = st.session_state['disp_finance_ratio'] / 100.0
     interest_rate_percent_disp = st.session_state['disp_interest']
     project_duration_months_disp = st.session_state['disp_duration']
-    hausgeld_eur_per_month_disp = st.session_state['disp_hausgeld_monthly']
-    TAX_RATE_FIXED = 29.0
-
-    # Financing and Equity
-    financed_per_project_ke = total_project_cost_ke_display * financing_ratio_disp
-    equity_per_project_ke = total_project_cost_ke_display - financed_per_project_ke
-
-    # Estimate Interest & Total Hausgeld for the duration
+    # Base for financing calculation (as before)
+    cost_basis_for_financing = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke
+    financed_amount_ke = cost_basis_for_financing * financing_ratio_disp
     monthly_interest_rate = (interest_rate_percent_disp / 100.0) / 12.0
-    estimated_interest_ke = financed_per_project_ke * monthly_interest_rate * project_duration_months_disp
+    estimated_interest_ke = financed_amount_ke * monthly_interest_rate * project_duration_months_disp
+
+    # 4. Calculate Total Hausgeld
+    hausgeld_eur_per_month_disp = st.session_state['disp_hausgeld_monthly']
     total_hausgeld_ke = (hausgeld_eur_per_month_disp / 1000.0) * project_duration_months_disp
 
-    # NEW Total Additional Costs (for display)
-    total_additional_costs_display_ke = purchase_tx_costs_ke + sale_tx_costs_ke + estimated_interest_ke + total_hausgeld_ke
+    # 5. Calculate Total Additional Costs (as per user definition)
+    total_additional_costs_ke = purchase_tx_costs_ke + sale_tx_costs_ke + estimated_interest_ke + total_hausgeld_ke
 
-    # Total Capital Invest (Equity + Estimated Interest + Total Hausgeld)
-    total_capital_invest_ke = equity_per_project_ke + estimated_interest_ke + total_hausgeld_ke
+    # 6. Calculate Total Project Cost (as per user definition)
+    total_project_cost_ke = buy_value_ke + reno_cost_ke + total_additional_costs_ke
 
-    # Recalculate Profit & Margin based on ALL estimated costs
-    total_effective_cost_ke = total_project_cost_ke_display + sale_tx_costs_ke + estimated_interest_ke + total_hausgeld_ke
-    profit_before_tax_ke = sell_value_ke - total_effective_cost_ke
+    # 7. Calculate Est. Capital Invest
+    # Equity needed is based on the *new* Total Project Cost
+    equity_needed_ke = total_project_cost_ke * (1 - financing_ratio_disp) # Re-calculate equity base
+    total_capital_invest_ke = equity_needed_ke + estimated_interest_ke + total_hausgeld_ke
+
+    # 8. Calculate Profit Before Tax
+    profit_before_tax_ke = sell_value_ke - total_project_cost_ke
+
+    # 9. Calculate Profit After Tax
+    TAX_RATE_FIXED = 29.0
     profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
-    margin_percent = (profit_before_tax_ke / total_effective_cost_ke) * 100 if total_effective_cost_ke > 0 else 0
 
-    # --- Display Rows --- 
+    # 10. Calculate Margin (based on new Total Project Cost)
+    margin_percent = (profit_before_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
+
+    # --- Display Rows --- (Using the newly calculated values)
     colA, colB = st.sidebar.columns(2)
-    colA.metric(label="Total Project Cost", value=f"{total_project_cost_ke_display:.1f} k€")
-    colB.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€")
+    colA.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€") # Step 6
+    colB.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€") # Step 7
 
     col1, col2 = st.sidebar.columns(2)
-    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€")
-    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€")
+    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€") # Step 1
+    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€") # Step 1
 
     col3, col4 = st.sidebar.columns(2)
-    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€")
-    col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_display_ke:.1f} k€") # Use new calculation
+    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€") # Step 1
+    col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€") # Step 5
 
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.1f} %") # Use new calculation
-    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Use new calculation
+    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.1f} %") # Step 10
+    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Step 9
 else:
     # Placeholder display
     colA, colB = st.sidebar.columns(2)
