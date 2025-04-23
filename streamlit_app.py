@@ -26,8 +26,8 @@ def initialize_state_if_missing(key, default_value):
     if key not in st.session_state:
         st.session_state[key] = default_value
 
-initialize_state_if_missing('disp_buy_val', 2.0)
-initialize_state_if_missing('disp_sell_val', 3.0)
+initialize_state_if_missing('disp_buy_val', 2.25)
+initialize_state_if_missing('disp_sell_val', 4.0)
 initialize_state_if_missing('disp_sqm_val', 84.0) # Use user's last default
 initialize_state_if_missing('disp_reno_val', 600.0) # Use user's last default
 initialize_state_if_missing('disp_land_tax', 6.5)
