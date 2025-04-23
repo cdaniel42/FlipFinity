@@ -87,9 +87,10 @@ if all_vars_valid:
     total_capital_invest_ke = equity_per_project_ke + estimated_interest_ke
 
     # Display Rows with Formatting
-    st.sidebar.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€")
-    st.sidebar.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€")
-    st.sidebar.markdown("&nbsp;")
+    # Row 1: Project Cost | Capital Invest
+    colA, colB = st.sidebar.columns(2)
+    colA.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€") # Displayed first
+    colB.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€")
 
     col1, col2 = st.sidebar.columns(2)
     col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€")
@@ -104,9 +105,9 @@ if all_vars_valid:
     col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€")
 else:
     # Placeholder display
-    st.sidebar.metric(label="Total Project Cost", value="...")
-    st.sidebar.metric(label="Est. Capital Invest", value="...")
-    st.sidebar.markdown("&nbsp;")
+    colA, colB = st.sidebar.columns(2)
+    colA.metric(label="Total Project Cost", value="...") # Placeholder first
+    colB.metric(label="Est. Capital Invest", value="...")
 
     col1, col2 = st.sidebar.columns(2)
     col1.metric(label="Total Buy Value", value="...")
