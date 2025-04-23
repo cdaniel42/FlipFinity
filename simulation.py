@@ -19,7 +19,7 @@ def run_single_simulation(
     financing_ratio_percent: float,
     interest_rate_percent: float, # Annual interest rate
     tax_rate_percent: float,
-    hausgeld_eur_per_month: float,
+    hausgeld_total_per_project_ke: float,
     land_transfer_tax_percent: float,
     notary_fee_percent: float,
     agent_fee_purchase_percent: float,
@@ -31,7 +31,7 @@ def run_single_simulation(
     """
     Runs a single simulation of the business lifecycle month by month.
 
-    Includes transaction costs (tax, notary, agent) and monthly holding costs (Hausgeld).
+    Includes transaction costs (tax, notary, agent) and total Hausgeld cost per project duration.
 
     Args:
         starting_capital_ke: Initial capital available in thousands of euros.
@@ -43,7 +43,7 @@ def run_single_simulation(
         financing_ratio_percent: The percentage of the project cost financed by loans.
         interest_rate_percent: Annual interest rate for loans.
         tax_rate_percent: Tax rate applied to profits.
-        hausgeld_eur_per_month: Monthly holding cost in euros.
+        hausgeld_total_per_project_ke: Total Hausgeld cost for the project duration in k€.
         land_transfer_tax_percent: Land transfer tax percentage.
         notary_fee_percent: Notary fee percentage.
         agent_fee_purchase_percent: Agent fee percentage for purchase.
@@ -65,7 +65,7 @@ def run_single_simulation(
         raise ValueError("Interest rate cannot be negative.")
     if renovation_cost_per_sqm_ke < 0:
         raise ValueError("Renovation cost cannot be negative.")
-    if hausgeld_eur_per_month < 0: raise ValueError("Hausgeld cannot be negative.")
+    if hausgeld_total_per_project_ke < 0: raise ValueError("Total Hausgeld cannot be negative.")
     if land_transfer_tax_percent < 0: raise ValueError("Land transfer tax % cannot be negative.")
     if notary_fee_percent < 0: raise ValueError("Notary fee % cannot be negative.")
     if agent_fee_purchase_percent < 0: raise ValueError("Agent purchase fee % cannot be negative.")
@@ -76,7 +76,6 @@ def run_single_simulation(
     monthly_interest_rate = (interest_rate_percent / 100.0) / 12.0
     duration_jitter_ratio = duration_jitter_percent / 100.0
     sell_price_jitter_ratio = sell_price_jitter_percent / 100.0
-    hausgeld_ke_per_month = hausgeld_eur_per_month / 1000.0
     land_transfer_tax_rate = land_transfer_tax_percent / 100.0
     notary_fee_rate = notary_fee_percent / 100.0
     agent_fee_purchase_rate = agent_fee_purchase_percent / 100.0
@@ -91,22 +90,17 @@ def run_single_simulation(
     monthly_revenue_accumulator = 0.0
     accumulated_profit_after_tax_ke = 0.0 # Track sum of profits
     accumulated_transaction_costs_ke = 0.0 # New accumulator
-    accumulated_holding_costs_ke = 0.0 # New accumulator (Interest + Hausgeld)
+    accumulated_interest_costs_ke = 0.0 # Track only interest
 
     # --- Simulation Loop ---
     for month in range(1, total_simulation_months + 1):
         previous_total_assets = current_total_assets
         monthly_revenue_accumulator = 0.0 # Reset for the current month
 
-        # 1. Pay Monthly Holding Costs
-        # Interest
+        # 1. Pay Monthly Holding Costs (Interest ONLY)
         interest_payment_ke = total_loan_balance * monthly_interest_rate
         liquid_capital -= interest_payment_ke
-        accumulated_holding_costs_ke += interest_payment_ke # Accumulate
-        # Hausgeld
-        hausgeld_payment_ke = len(active_projects) * hausgeld_ke_per_month
-        liquid_capital -= hausgeld_payment_ke
-        accumulated_holding_costs_ke += hausgeld_payment_ke # Accumulate
+        accumulated_interest_costs_ke += interest_payment_ke # Accumulate only interest
 
         # 2. Process Completed Projects
         completed_this_month = [p for p in active_projects if p['remaining_duration'] <= 0]
@@ -122,12 +116,13 @@ def run_single_simulation(
             sale_agent_fee_ke = actual_revenue_ke * agent_fee_sale_rate
             accumulated_transaction_costs_ke += sale_agent_fee_ke # Accumulate
 
-            # Calculate profit before tax (Revenue - PropertyCost - RenoCost - PurchaseTxCosts - SaleTxCosts)
+            # Calculate profit before tax (Revenue - PropertyCost - RenoCost - PurchaseTxCosts - SaleTxCosts - TotalHausgeld)
             profit_before_tax_ke = (actual_revenue_ke
                                    - project['property_buy_value_ke']
                                    - project['renovation_total_cost_ke']
                                    - project['purchase_transaction_costs_ke']
-                                   - sale_agent_fee_ke)
+                                   - sale_agent_fee_ke
+                                   - project['hausgeld_total_ke'])
 
             tax_on_profit_ke = max(0, profit_before_tax_ke * tax_rate)
             profit_after_tax_ke = profit_before_tax_ke - tax_on_profit_ke
@@ -145,14 +140,14 @@ def run_single_simulation(
         # 3. Start New Projects
         projects_started_this_month = 0
         while True: # Loop indefinitely until broken
-            # Calculate costs & equity needed for a potential new project
+            # Calculate ALL upfront costs including total Hausgeld
             property_buy_value_ke = sqm_buy_value_ke * total_sqm
             renovation_total_cost_ke = renovation_cost_per_sqm_ke * total_sqm
             purchase_transaction_costs_ke = (property_buy_value_ke * land_transfer_tax_rate +
                                            property_buy_value_ke * notary_fee_rate +
                                            property_buy_value_ke * agent_fee_purchase_rate)
-
-            total_upfront_investment_ke = property_buy_value_ke + renovation_total_cost_ke + purchase_transaction_costs_ke
+            # Total Hausgeld is now passed as a parameter
+            total_upfront_investment_ke = property_buy_value_ke + renovation_total_cost_ke + purchase_transaction_costs_ke + hausgeld_total_per_project_ke
 
             # Exit conditions for the loop
             if total_upfront_investment_ke <= 0:
@@ -182,7 +177,8 @@ def run_single_simulation(
                 'property_buy_value_ke': property_buy_value_ke,
                 'renovation_total_cost_ke': renovation_total_cost_ke,
                 'purchase_transaction_costs_ke': purchase_transaction_costs_ke,
-                'base_sell_value_ke': sqm_sell_value_ke
+                'base_sell_value_ke': sqm_sell_value_ke,
+                'hausgeld_total_ke': hausgeld_total_per_project_ke
             })
             projects_started_this_month += 1
             # Loop continues to see if another project can be started
@@ -205,7 +201,7 @@ def run_single_simulation(
             'Monthly_Net_Gain_kE': monthly_net_gain,
             'Accumulated_Profit_After_Tax_kE': accumulated_profit_after_tax_ke,
             'Accumulated_Transaction_Costs_kE': accumulated_transaction_costs_ke,
-            'Accumulated_Holding_Costs_kE': accumulated_holding_costs_ke,
+            'Accumulated_Interest_Costs_kE': accumulated_interest_costs_ke,
             'Monthly_Revenue_kE': monthly_revenue_accumulator,
             'Projects_Started': projects_started_this_month,
             'Projects_Completed': len(completed_this_month)
@@ -225,7 +221,7 @@ def run_monte_carlo_simulations(
     financing_ratio_percent: float,
     interest_rate_percent: float,
     tax_rate_percent: float,
-    hausgeld_eur_per_month: float,
+    hausgeld_total_per_project_ke: float,
     land_transfer_tax_percent: float,
     notary_fee_percent: float,
     agent_fee_purchase_percent: float,
@@ -263,7 +259,7 @@ def run_monte_carlo_simulations(
             financing_ratio_percent=financing_ratio_percent,
             interest_rate_percent=interest_rate_percent,
             tax_rate_percent=tax_rate_percent,
-            hausgeld_eur_per_month=hausgeld_eur_per_month,
+            hausgeld_total_per_project_ke=hausgeld_total_per_project_ke,
             land_transfer_tax_percent=land_transfer_tax_percent,
             notary_fee_percent=notary_fee_percent,
             agent_fee_purchase_percent=agent_fee_purchase_percent,
@@ -284,14 +280,14 @@ def run_monte_carlo_simulations(
     all_accumulated_profit = pd.concat([df.set_index('Month')['Accumulated_Profit_After_Tax_kE'] for df in all_results_list], axis=1)
     all_revenue = pd.concat([df.set_index('Month')['Monthly_Revenue_kE'] for df in all_results_list], axis=1)
     all_tx_costs = pd.concat([df.set_index('Month')['Accumulated_Transaction_Costs_kE'] for df in all_results_list], axis=1)
-    all_hold_costs = pd.concat([df.set_index('Month')['Accumulated_Holding_Costs_kE'] for df in all_results_list], axis=1)
+    all_interest_costs = pd.concat([df.set_index('Month')['Accumulated_Interest_Costs_kE'] for df in all_results_list], axis=1)
 
     # Calculate summary statistics
     asset_stats = all_assets.agg(['mean', 'std', 'min', 'max'], axis=1)
     accumulated_profit_stats = all_accumulated_profit.agg(['mean', 'std', 'min', 'max'], axis=1)
     revenue_stats = all_revenue.agg(['mean', 'std', 'min', 'max'], axis=1)
     tx_cost_stats = all_tx_costs.agg(['mean', 'std', 'min', 'max'], axis=1)
-    hold_cost_stats = all_hold_costs.agg(['mean', 'std', 'min', 'max'], axis=1)
+    interest_cost_stats = all_interest_costs.agg(['mean', 'std', 'min', 'max'], axis=1)
 
     # Calculate percentiles separately
     asset_stats['p25'] = all_assets.quantile(0.25, axis=1)
@@ -311,9 +307,9 @@ def run_monte_carlo_simulations(
     tx_cost_stats['p50'] = all_tx_costs.quantile(0.50, axis=1)
     tx_cost_stats['p75'] = all_tx_costs.quantile(0.75, axis=1)
 
-    hold_cost_stats['p25'] = all_hold_costs.quantile(0.25, axis=1)
-    hold_cost_stats['p50'] = all_hold_costs.quantile(0.50, axis=1)
-    hold_cost_stats['p75'] = all_hold_costs.quantile(0.75, axis=1)
+    interest_cost_stats['p25'] = all_interest_costs.quantile(0.25, axis=1)
+    interest_cost_stats['p50'] = all_interest_costs.quantile(0.50, axis=1)
+    interest_cost_stats['p75'] = all_interest_costs.quantile(0.75, axis=1)
 
     # Combine stats
     summary_stats = pd.concat([
@@ -321,7 +317,7 @@ def run_monte_carlo_simulations(
         accumulated_profit_stats.add_prefix('AccumulatedProfit_'),
         revenue_stats.add_prefix('Revenue_'),
         tx_cost_stats.add_prefix('AccumulatedTxCosts_'),
-        hold_cost_stats.add_prefix('AccumulatedHoldCosts_')
+        interest_cost_stats.add_prefix('AccumulatedInterestCosts_')
     ], axis=1)
 
     # Reorder columns
@@ -329,8 +325,8 @@ def run_monte_carlo_simulations(
     accumulated_profit_cols = ['AccumulatedProfit_mean', 'AccumulatedProfit_std', 'AccumulatedProfit_min', 'AccumulatedProfit_p25', 'AccumulatedProfit_p50', 'AccumulatedProfit_p75', 'AccumulatedProfit_max']
     revenue_cols = ['Revenue_mean', 'Revenue_std', 'Revenue_min', 'Revenue_p25', 'Revenue_p50', 'Revenue_p75', 'Revenue_max']
     tx_cost_cols = ['AccumulatedTxCosts_mean', 'AccumulatedTxCosts_std', 'AccumulatedTxCosts_min', 'AccumulatedTxCosts_p25', 'AccumulatedTxCosts_p50', 'AccumulatedTxCosts_p75', 'AccumulatedTxCosts_max']
-    hold_cost_cols = ['AccumulatedHoldCosts_mean', 'AccumulatedHoldCosts_std', 'AccumulatedHoldCosts_min', 'AccumulatedHoldCosts_p25', 'AccumulatedHoldCosts_p50', 'AccumulatedHoldCosts_p75', 'AccumulatedHoldCosts_max']
-    summary_stats = summary_stats[asset_cols + accumulated_profit_cols + revenue_cols + tx_cost_cols + hold_cost_cols]
+    interest_cost_cols = ['AccumulatedInterestCosts_mean', 'AccumulatedInterestCosts_std', 'AccumulatedInterestCosts_min', 'AccumulatedInterestCosts_p25', 'AccumulatedInterestCosts_p50', 'AccumulatedInterestCosts_p75', 'AccumulatedInterestCosts_max']
+    summary_stats = summary_stats[asset_cols + accumulated_profit_cols + revenue_cols + tx_cost_cols + interest_cost_cols]
 
     return {
         "summary_stats": summary_stats,
@@ -351,7 +347,7 @@ if __name__ == '__main__':
         financing_ratio_percent=90.0,
         interest_rate_percent=5.0,
         tax_rate_percent=29.125, # Example value from sheet
-        hausgeld_eur_per_month=0.0, # Example value
+        hausgeld_total_per_project_ke=0.0, # Example value
         land_transfer_tax_percent=0.0, # Example value
         notary_fee_percent=0.0, # Example value
         agent_fee_purchase_percent=0.0, # Example value

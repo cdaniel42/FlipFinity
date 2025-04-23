@@ -37,6 +37,7 @@ initialize_state_if_missing('disp_agent_sell', 3.57)
 initialize_state_if_missing('disp_duration', 9)
 initialize_state_if_missing('disp_finance_ratio', 90.0)
 initialize_state_if_missing('disp_interest', 5.0)
+initialize_state_if_missing('disp_hausgeld_monthly', 400.0) # Add Hausgeld
 
 # --- Display Calculated Values (Below Button - Reads from initialized state) ---
 st.sidebar.subheader("Calculated Totals per Project")
@@ -49,6 +50,10 @@ land_transfer_tax_percent_disp = st.session_state['disp_land_tax']
 notary_fee_percent_disp = st.session_state['disp_notary']
 agent_fee_purchase_percent_disp = st.session_state['disp_agent_buy']
 agent_fee_sale_percent_disp = st.session_state['disp_agent_sell']
+project_duration_months_disp = st.session_state['disp_duration']
+hausgeld_eur_per_month_disp = st.session_state['disp_hausgeld_monthly']
+financing_ratio_disp = st.session_state['disp_finance_ratio'] / 100.0
+interest_rate_percent_disp = st.session_state['disp_interest']
 TAX_RATE_FIXED = 29.0
 
 # Check validity - simplified check now state is initialized
@@ -56,7 +61,8 @@ all_vars_valid = True
 if not all([
     isinstance(st.session_state[key], (int, float))
     for key in ['disp_buy_val', 'disp_sell_val', 'disp_sqm_val', 'disp_reno_val',
-                'disp_land_tax', 'disp_notary', 'disp_agent_buy', 'disp_agent_sell']
+                'disp_land_tax', 'disp_notary', 'disp_agent_buy', 'disp_agent_sell',
+                'disp_duration', 'disp_hausgeld_monthly', 'disp_finance_ratio', 'disp_interest']
 ]):
     all_vars_valid = False
 
@@ -64,7 +70,7 @@ if all_vars_valid and (st.session_state['disp_sqm_val'] <= 0 or st.session_state
     all_vars_valid = False
 
 if all_vars_valid:
-    # Calculations using current values from state
+    # Calculations including total Hausgeld
     buy_value_ke = sqm_buy_value_ke_disp * total_sqm_disp
     sell_value_ke = sqm_sell_value_ke_disp * total_sqm_disp
     reno_cost_ke = (renovation_cost_per_sqm_eur_disp / 1000.0) * total_sqm_disp
@@ -73,19 +79,21 @@ if all_vars_valid:
     )
     sale_tx_costs_ke = sell_value_ke * (agent_fee_sale_percent_disp / 100.0)
     total_additional_costs_ke = purchase_tx_costs_ke + sale_tx_costs_ke
-    total_project_cost_ke = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke
-    profit_before_tax_ke = sell_value_ke - total_project_cost_ke - sale_tx_costs_ke
+    # Calculate TOTAL Hausgeld for the project duration
+    total_hausgeld_ke = (hausgeld_eur_per_month_disp / 1000.0) * project_duration_months_disp
+
+    # Update Total Project Cost to include Total Hausgeld
+    total_project_cost_ke = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke + total_hausgeld_ke
+
+    profit_before_tax_ke = sell_value_ke - total_project_cost_ke - sale_tx_costs_ke # Hausgeld is now in project cost
     profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
     margin_percent = ((sell_value_ke - total_project_cost_ke - sale_tx_costs_ke) / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
 
-    # Est Capital Invest Calculation dependencies
-    financing_ratio_disp = st.session_state['disp_finance_ratio'] / 100.0
-    interest_rate_percent_disp = st.session_state['disp_interest']
-    project_duration_months_disp = st.session_state['disp_duration']
-
+    # Update Est Capital Invest calculation
     financed_per_project_ke = total_project_cost_ke * financing_ratio_disp
     equity_per_project_ke = total_project_cost_ke - financed_per_project_ke
     monthly_interest_rate = (interest_rate_percent_disp / 100.0) / 12.0
+    # Interest estimate still based on financed amount and duration
     estimated_interest_ke = financed_per_project_ke * monthly_interest_rate * project_duration_months_disp
     total_capital_invest_ke = equity_per_project_ke + estimated_interest_ke
 
@@ -142,7 +150,7 @@ project_duration_months = st.sidebar.number_input("Project Duration (months)", v
 starting_capital_ke = st.sidebar.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0) # No key needed if not used for dynamic display
 financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1, key='disp_finance_ratio')
 interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0, key='disp_interest')
-hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0) # Key not needed if not used for display
+hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld_monthly') # Updated Key
 st.sidebar.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}")
 
 st.sidebar.subheader("Simulation Settings")
