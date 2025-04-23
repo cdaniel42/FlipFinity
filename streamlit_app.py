@@ -72,19 +72,25 @@ if all_vars_valid:
     margin_percent = ((sell_value_ke - total_project_cost_ke - sale_tx_costs_ke) / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
 
     # Display Rows with Formatting
+    st.sidebar.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€")
+    st.sidebar.markdown("&nbsp;")
+
     col1, col2 = st.sidebar.columns(2)
-    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€") # No decimals
-    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€") # No decimals
+    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€")
+    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€")
 
     col3, col4 = st.sidebar.columns(2)
-    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€") # One decimal
-    col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€") # One decimal
+    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€")
+    col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€")
 
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.1f} %") # One decimal
-    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # One decimal
+    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.1f} %")
+    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€")
 else:
     # Placeholder display
+    st.sidebar.metric(label="Total Project Cost", value="...")
+    st.sidebar.markdown("&nbsp;")
+
     col1, col2 = st.sidebar.columns(2)
     col1.metric(label="Total Buy Value", value="...")
     col2.metric(label="Total Sell Value", value="...")
@@ -94,15 +100,17 @@ else:
     col5, col6 = st.sidebar.columns(2)
     col5.metric(label="Margin (%)", value="...")
     col6.metric(label="Profit After Tax", value="...")
+    col7, col8 = st.sidebar.columns(2)
+    col7.metric(label="Total Capital Invest", value="...")
 
 st.sidebar.markdown("---") # Separator
 
 # --- Input Widgets (All grouped below separator) ---
 st.sidebar.subheader("Project Base Values")
-sqm_buy_value_ke = st.sidebar.number_input("SqM Buy Value (k€/sqm)", value=2.0, step=0.05, min_value=0.01, key='disp_buy_val') # Key links to display above
-sqm_sell_value_ke = st.sidebar.number_input("SqM Sell Value (k€/sqm)", value=3.0, step=0.05, min_value=0.01, key='disp_sell_val')
+sqm_buy_value_ke = st.sidebar.number_input("SqM Buy Value (k€/sqm)", value=2.25, step=0.05, min_value=0.01, key='disp_buy_val') # Key links to display above
+sqm_sell_value_ke = st.sidebar.number_input("SqM Sell Value (k€/sqm)", value=4.0, step=0.05, min_value=0.01, key='disp_sell_val')
 total_sqm = st.sidebar.number_input("Total SqM per Project", value=100.0, step=10.0, min_value=1.0, key='disp_sqm_val')
-renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=500.0, step=50.0, min_value=0.0, key='disp_reno_val')
+renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=600.0, step=50.0, min_value=0.0, key='disp_reno_val')
 land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax')
 notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy)", value=1.5, step=0.1, min_value=0.0, key='disp_notary')
 agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_buy')
@@ -120,7 +128,7 @@ st.sidebar.subheader("Simulation Settings")
 duration_jitter_percent = st.sidebar.number_input("Duration Jitter (% +/-)", value=20.0, step=1.0, min_value=0.0)
 sell_price_jitter_percent = st.sidebar.number_input("Sell Price Jitter (% +/-)", value=10.0, step=1.0, min_value=0.0)
 total_simulation_months = st.sidebar.number_input("Total Simulation Months", value=60, step=1, min_value=1)
-num_simulations = st.sidebar.number_input("Number of Simulations", value=50, step=50, min_value=10)
+num_simulations = st.sidebar.number_input("Number of Simulations", value=200, step=50, min_value=10)
 
 # --- Helper Functions for Star Rating ---
 def calculate_star_rating(profit_me: float) -> float:
