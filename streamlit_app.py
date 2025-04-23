@@ -12,7 +12,7 @@ import numpy as np # Needed for linear interpolation
 from simulation import run_monte_carlo_simulations
 from visualization import plot_asset_growth, plot_accumulated_profit, plot_monthly_revenue
 
-st.set_page_config(layout="wide") # Use wide layout for better plot display
+st.set_page_config(layout="wide", initial_sidebar_state="expanded") # Use wide layout & expanded sidebar
 
 st.title("FlipFinity Business Simulator")
 
@@ -23,43 +23,48 @@ run_button = st.sidebar.button("Run Simulation", key='run_sim_button_top')
 
 # --- Display Calculated Values (Below Button) ---
 st.sidebar.subheader("Calculated Totals per Project")
-# Access widget values using session state (keys defined below)
-sqm_buy_value_ke_disp = st.session_state.get('disp_buy_val', 2.0)
-sqm_sell_value_ke_disp = st.session_state.get('disp_sell_val', 3.0)
-total_sqm_disp = st.session_state.get('disp_sqm_val', 100.0)
-renovation_cost_per_sqm_eur_disp = st.session_state.get('disp_reno_val', 500.0)
-land_transfer_tax_percent_disp = st.session_state.get('disp_land_tax', 6.5)
-notary_fee_percent_disp = st.session_state.get('disp_notary', 1.5)
-agent_fee_purchase_percent_disp = st.session_state.get('disp_agent_buy', 3.57)
-agent_fee_sale_percent_disp = st.session_state.get('disp_agent_sell', 3.57)
+# Access widget values using session state, providing the correct widget default as the fallback
+sqm_buy_value_ke_disp = st.session_state.get('disp_buy_val', 2.0) # Default from widget
+sqm_sell_value_ke_disp = st.session_state.get('disp_sell_val', 3.0) # Default from widget
+total_sqm_disp = st.session_state.get('disp_sqm_val', 100.0) # Default from widget
+renovation_cost_per_sqm_eur_disp = st.session_state.get('disp_reno_val', 500.0) # Default from widget
+land_transfer_tax_percent_disp = st.session_state.get('disp_land_tax', 6.5) # Default from widget
+notary_fee_percent_disp = st.session_state.get('disp_notary', 1.5) # Default from widget
+agent_fee_purchase_percent_disp = st.session_state.get('disp_agent_buy', 3.57) # Default from widget
+agent_fee_sale_percent_disp = st.session_state.get('disp_agent_sell', 3.57) # Default from widget
 TAX_RATE_FIXED = 29.0
 
-# Check validity
-required_vars_keys = [
-    'disp_buy_val', 'disp_sell_val', 'disp_sqm_val', 'disp_reno_val',
-    'disp_land_tax', 'disp_notary', 'disp_agent_buy', 'disp_agent_sell'
-]
+# Perform calculations directly using the retrieved/default values
+# Add basic type/value checks before calculation to avoid errors
 all_vars_valid = True
-current_values = {}
-for key in required_vars_keys:
-    val = st.session_state.get(key)
+inputs_for_calc = {
+    'sqm_buy_value_ke': sqm_buy_value_ke_disp,
+    'sqm_sell_value_ke': sqm_sell_value_ke_disp,
+    'total_sqm': total_sqm_disp,
+    'renovation_cost_per_sqm_eur': renovation_cost_per_sqm_eur_disp,
+    'land_transfer_tax_percent': land_transfer_tax_percent_disp,
+    'notary_fee_percent': notary_fee_percent_disp,
+    'agent_fee_purchase_percent': agent_fee_purchase_percent_disp,
+    'agent_fee_sale_percent': agent_fee_sale_percent_disp
+}
+
+for key, val in inputs_for_calc.items():
     if not isinstance(val, (int, float)):
         all_vars_valid = False
         break
-    current_values[key] = val
-# Specific checks
-if all_vars_valid and (current_values['disp_sqm_val'] <= 0 or current_values['disp_buy_val'] <= 0):
+# Specific value checks
+if all_vars_valid and (inputs_for_calc['total_sqm'] <= 0 or inputs_for_calc['sqm_buy_value_ke'] <= 0):
     all_vars_valid = False
 
 if all_vars_valid:
-    # Calculations using current values
-    buy_value_ke = current_values['disp_buy_val'] * current_values['disp_sqm_val']
-    sell_value_ke = current_values['disp_sell_val'] * current_values['disp_sqm_val']
-    reno_cost_ke = (current_values['disp_reno_val'] / 1000.0) * current_values['disp_sqm_val']
+    # Calculations using validated values
+    buy_value_ke = inputs_for_calc['sqm_buy_value_ke'] * inputs_for_calc['total_sqm']
+    sell_value_ke = inputs_for_calc['sqm_sell_value_ke'] * inputs_for_calc['total_sqm']
+    reno_cost_ke = (inputs_for_calc['renovation_cost_per_sqm_eur'] / 1000.0) * inputs_for_calc['total_sqm']
     purchase_tx_costs_ke = buy_value_ke * (
-        (current_values['disp_land_tax'] + current_values['disp_notary'] + current_values['disp_agent_buy']) / 100.0
+        (inputs_for_calc['land_transfer_tax_percent'] + inputs_for_calc['notary_fee_percent'] + inputs_for_calc['agent_fee_purchase_percent']) / 100.0
     )
-    sale_tx_costs_ke = sell_value_ke * (current_values['disp_agent_sell'] / 100.0)
+    sale_tx_costs_ke = sell_value_ke * (inputs_for_calc['agent_fee_sale_percent'] / 100.0)
     total_additional_costs_ke = purchase_tx_costs_ke + sale_tx_costs_ke
     total_project_cost_ke = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke
     profit_before_tax_ke = sell_value_ke - total_project_cost_ke - sale_tx_costs_ke
