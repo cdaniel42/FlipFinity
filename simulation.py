@@ -144,8 +144,8 @@ def run_single_simulation(
 
         # 3. Start New Projects
         projects_started_this_month = 0
-        while liquid_capital >= equity_per_project_ke and equity_per_project_ke > 0:
-            # Calculate costs for a *potential* new project first
+        while True: # Loop indefinitely until broken
+            # Calculate costs & equity needed for a potential new project
             property_buy_value_ke = sqm_buy_value_ke * total_sqm
             renovation_total_cost_ke = renovation_cost_per_sqm_ke * total_sqm
             purchase_transaction_costs_ke = (property_buy_value_ke * land_transfer_tax_rate +
@@ -153,34 +153,39 @@ def run_single_simulation(
                                            property_buy_value_ke * agent_fee_purchase_rate)
 
             total_upfront_investment_ke = property_buy_value_ke + renovation_total_cost_ke + purchase_transaction_costs_ke
+
+            # Exit conditions for the loop
             if total_upfront_investment_ke <= 0:
-                # Avoid infinite loop if project cost is zero/negative
-                break
+                break # Cannot start a project with zero/negative cost
 
             financed_per_project_ke = total_upfront_investment_ke * financing_ratio
             equity_per_project_ke = total_upfront_investment_ke - financed_per_project_ke
 
-            if liquid_capital >= equity_per_project_ke:
-                # Apply jitter to duration for this specific project
-                duration_jitter = np.random.uniform(-duration_jitter_ratio, duration_jitter_ratio)
-                actual_duration = max(1, round(project_duration_months * (1 + duration_jitter))) # Ensure duration is at least 1 month
+            if liquid_capital < equity_per_project_ke:
+                break # Cannot afford the equity for this project
 
-                liquid_capital -= equity_per_project_ke
-                total_loan_balance += financed_per_project_ke
-                accumulated_transaction_costs_ke += purchase_transaction_costs_ke # Accumulate purchase costs
+            # If we reach here, we can start the project
+            # Apply jitter to duration
+            duration_jitter = np.random.uniform(-duration_jitter_ratio, duration_jitter_ratio)
+            actual_duration = max(1, round(project_duration_months * (1 + duration_jitter)))
 
-                active_projects.append({
-                    'remaining_duration': actual_duration,
-                    'equity_invested': equity_per_project_ke,
-                    'loan_taken': financed_per_project_ke,
-                    'property_buy_value_ke': property_buy_value_ke, # Store costs for later profit calc
-                    'renovation_total_cost_ke': renovation_total_cost_ke,
-                    'purchase_transaction_costs_ke': purchase_transaction_costs_ke,
-                    'base_sell_value_ke': sqm_sell_value_ke # Base sell value before jitter
-                })
-                projects_started_this_month += 1
-            else:
-                break # Cannot afford this project
+            # Deduct equity, increase loan, accumulate costs
+            liquid_capital -= equity_per_project_ke
+            total_loan_balance += financed_per_project_ke
+            accumulated_transaction_costs_ke += purchase_transaction_costs_ke
+
+            # Add project to active list
+            active_projects.append({
+                'remaining_duration': actual_duration,
+                'equity_invested': equity_per_project_ke,
+                'loan_taken': financed_per_project_ke,
+                'property_buy_value_ke': property_buy_value_ke,
+                'renovation_total_cost_ke': renovation_total_cost_ke,
+                'purchase_transaction_costs_ke': purchase_transaction_costs_ke,
+                'base_sell_value_ke': sqm_sell_value_ke
+            })
+            projects_started_this_month += 1
+            # Loop continues to see if another project can be started
 
         # 4. Decrement Remaining Durations
         for project in active_projects:
