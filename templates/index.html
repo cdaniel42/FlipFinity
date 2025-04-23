@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlipFinity Simulator</title>
+    <!-- Include Plotly.js -->
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { display: flex; gap: 30px; }
+        .inputs { width: 300px; }
+        .results { flex-grow: 1; }
+        label { display: block; margin-top: 10px; }
+        input[type="number"] { width: 90%; padding: 5px; }
+        button { margin-top: 20px; padding: 10px 15px; cursor: pointer; }
+        #summary-output { margin-top: 20px; font-weight: bold; }
+        .plot { margin-top: 20px; min-height: 400px; }
+        #loading { display: none; margin-top: 15px; color: blue; }
+        #error-output { display: none; margin-top: 15px; color: red; }
+    </style>
+</head>
+<body>
+    <h1>FlipFinity Business Simulator</h1>
+
+    <div class="container">
+        <div class="inputs">
+            <h2>Input Parameters</h2>
+            <form id="sim-form">
+                <label for="starting_capital_ke">Starting Capital (k€):</label>
+                <input type="number" id="starting_capital_ke" name="starting_capital_ke" value="60" step="any" required>
+
+                <label for="sqm_buy_value_ke">SqM Buy Value (k€/sqm):</label>
+                <input type="number" id="sqm_buy_value_ke" name="sqm_buy_value_ke" value="1.5" step="any" required>
+
+                <label for="sqm_sell_value_ke">SqM Sell Value (k€/sqm):</label>
+                <input type="number" id="sqm_sell_value_ke" name="sqm_sell_value_ke" value="2.0" step="any" required>
+
+                <label for="total_sqm">Total SqM per Project:</label>
+                <input type="number" id="total_sqm" name="total_sqm" value="100" step="any" required>
+
+                <label for="project_duration_months">Project Duration (months):</label>
+                <input type="number" id="project_duration_months" name="project_duration_months" value="9" step="1" required>
+
+                <label for="financing_ratio_percent">Financing Ratio (%):</label>
+                <input type="number" id="financing_ratio_percent" name="financing_ratio_percent" value="90" step="any" min="0" max="100" required>
+
+                <label for="interest_rate_percent">Interest Rate (% annual):</label>
+                <input type="number" id="interest_rate_percent" name="interest_rate_percent" value="5" step="any" required>
+
+                <label for="tax_rate_percent">Tax Rate (%):</label>
+                <input type="number" id="tax_rate_percent" name="tax_rate_percent" value="29.125" step="any" min="0" max="100" required>
+
+                <label for="duration_jitter_percent">Duration Jitter (% +/-):</label>
+                <input type="number" id="duration_jitter_percent" name="duration_jitter_percent" value="10" step="any" min="0" required>
+
+                <label for="sell_price_jitter_percent">Sell Price Jitter (% +/-):</label>
+                <input type="number" id="sell_price_jitter_percent" name="sell_price_jitter_percent" value="5" step="any" min="0" required>
+
+                <label for="total_simulation_months">Total Simulation Months:</label>
+                <input type="number" id="total_simulation_months" name="total_simulation_months" value="60" step="1" required>
+
+                <label for="num_simulations">Number of Simulations:</label>
+                <input type="number" id="num_simulations" name="num_simulations" value="500" step="1" required>
+
+                <button type="submit">Run Simulation</button>
+                <div id="loading">Running simulation...</div>
+                <div id="error-output"></div>
+            </form>
+        </div>
+
+        <div class="results">
+            <h2>Results</h2>
+            <div id="summary-output"></div>
+            <div id="asset-plot" class="plot"></div>
+            <div id="gains-plot" class="plot"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('sim-form');
+        const summaryOutput = document.getElementById('summary-output');
+        const assetPlotDiv = document.getElementById('asset-plot');
+        const gainsPlotDiv = document.getElementById('gains-plot');
+        const loadingDiv = document.getElementById('loading');
+        const errorOutput = document.getElementById('error-output');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            // Clear previous results and errors
+            summaryOutput.textContent = '';
+            assetPlotDiv.innerHTML = '';
+            gainsPlotDiv.innerHTML = '';
+            errorOutput.textContent = '';
+            errorOutput.style.display = 'none';
+            loadingDiv.style.display = 'block'; // Show loading indicator
+
+            const formData = new FormData(form);
+            const data = {};
+            // Convert FormData to plain object and parse numbers
+            for (const [key, value] of formData.entries()) {
+                // Check if value is numeric before parsing
+                const numValue = parseFloat(value);
+                data[key] = isNaN(numValue) ? value : numValue;
+            }
+
+            try {
+                const response = await fetch('/simulate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                loadingDiv.style.display = 'none'; // Hide loading indicator
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const results = await response.json();
+
+                // Display summary
+                summaryOutput.textContent = results.summary_text;
+
+                // Render plots
+                const assetPlotData = JSON.parse(results.asset_growth_plot_json);
+                Plotly.newPlot('asset-plot', assetPlotData.data, assetPlotData.layout);
+
+                const gainsPlotData = JSON.parse(results.monthly_gains_plot_json);
+                Plotly.newPlot('gains-plot', gainsPlotData.data, gainsPlotData.layout);
+
+            } catch (error) {
+                loadingDiv.style.display = 'none'; // Hide loading indicator on error too
+                console.error('Simulation Error:', error);
+                errorOutput.textContent = `Error: ${error.message}`;
+                errorOutput.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 
