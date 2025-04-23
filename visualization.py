@@ -56,7 +56,7 @@ def plot_asset_growth(summary_stats: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title='Simulated Asset Growth Over Time',
         xaxis_title='Month',
-        yaxis_title='Total Assets (k€)',
+        yaxis_title='Total Assets (M€)',
         hovermode="x unified"
     )
 
@@ -109,7 +109,7 @@ def plot_accumulated_profit(summary_stats: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title='Simulated Accumulated Profit After Tax Over Time',
         xaxis_title='Month',
-        yaxis_title='Accumulated Profit After Tax (k€)',
+        yaxis_title='Accumulated Profit After Tax (M€)',
         hovermode="x unified"
     )
 
