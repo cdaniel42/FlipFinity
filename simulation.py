@@ -69,7 +69,8 @@ def run_single_simulation(
     active_projects = [] # List of dicts: {'remaining_duration', 'equity_invested', 'loan_taken', 'potential_revenue_ke'}
     monthly_results = []
     current_total_assets = starting_capital_ke # Initial assets are just the starting capital
-    monthly_revenue_accumulator = 0.0 # Initialize monthly revenue accumulator
+    monthly_revenue_accumulator = 0.0
+    accumulated_profit_after_tax_ke = 0.0 # Track sum of profits
 
     # --- Simulation Loop ---
     for month in range(1, total_simulation_months + 1):
@@ -99,6 +100,8 @@ def run_single_simulation(
 
             # Accumulate revenue for the month
             monthly_revenue_accumulator += actual_revenue_ke
+            # Accumulate Profit After Tax
+            accumulated_profit_after_tax_ke += profit_after_tax
 
             # Return capital and profits, pay off loan principal
             liquid_capital += project['equity_invested'] + profit_after_tax
@@ -141,6 +144,7 @@ def run_single_simulation(
             'Total_Assets_kE': current_total_assets,
             'Total_Loan_Balance_kE': total_loan_balance,
             'Monthly_Net_Gain_kE': monthly_net_gain,
+            'Accumulated_Profit_After_Tax_kE': accumulated_profit_after_tax_ke,
             'Monthly_Revenue_kE': monthly_revenue_accumulator,
             'Projects_Started': projects_started_this_month,
             'Projects_Completed': len(completed_this_month)
@@ -202,14 +206,14 @@ def run_monte_carlo_simulations(
     # Need a common key to join/align data across simulations by month
     # We can concatenate and then group by month
 
-    # Focus on key metrics for aggregation: Assets, Gains, and Revenue
+    # Focus on key metrics for aggregation: Assets, Accumulated Profit After Tax, and Monthly Revenue
     all_assets = pd.concat([df.set_index('Month')['Total_Assets_kE'] for df in all_results_list], axis=1)
-    all_gains = pd.concat([df.set_index('Month')['Monthly_Net_Gain_kE'] for df in all_results_list], axis=1)
+    all_accumulated_profit = pd.concat([df.set_index('Month')['Accumulated_Profit_After_Tax_kE'] for df in all_results_list], axis=1)
     all_revenue = pd.concat([df.set_index('Month')['Monthly_Revenue_kE'] for df in all_results_list], axis=1)
 
     # Calculate summary statistics
     asset_stats = all_assets.agg(['mean', 'std', 'min', 'max'], axis=1)
-    gain_stats = all_gains.agg(['mean', 'std', 'min', 'max'], axis=1)
+    accumulated_profit_stats = all_accumulated_profit.agg(['mean', 'std', 'min', 'max'], axis=1)
     revenue_stats = all_revenue.agg(['mean', 'std', 'min', 'max'], axis=1)
 
     # Calculate percentiles separately
@@ -217,26 +221,27 @@ def run_monte_carlo_simulations(
     asset_stats['p50'] = all_assets.quantile(0.50, axis=1) # Median
     asset_stats['p75'] = all_assets.quantile(0.75, axis=1)
 
-    gain_stats['p25'] = all_gains.quantile(0.25, axis=1)
-    gain_stats['p50'] = all_gains.quantile(0.50, axis=1) # Median
-    gain_stats['p75'] = all_gains.quantile(0.75, axis=1)
+    accumulated_profit_stats['p25'] = all_accumulated_profit.quantile(0.25, axis=1)
+    accumulated_profit_stats['p50'] = all_accumulated_profit.quantile(0.50, axis=1)
+    accumulated_profit_stats['p75'] = all_accumulated_profit.quantile(0.75, axis=1)
 
+    # ... revenue percentiles ...
     revenue_stats['p25'] = all_revenue.quantile(0.25, axis=1)
     revenue_stats['p50'] = all_revenue.quantile(0.50, axis=1) # Median
     revenue_stats['p75'] = all_revenue.quantile(0.75, axis=1)
 
-    # Combine stats for assets, gains, and revenue into one summary DataFrame
+    # Combine stats
     summary_stats = pd.concat([
         asset_stats.add_prefix('Assets_'),
-        gain_stats.add_prefix('Gains_'),
+        accumulated_profit_stats.add_prefix('AccumulatedProfit_'),
         revenue_stats.add_prefix('Revenue_')
     ], axis=1)
 
-    # Reorder columns for clarity
+    # Reorder columns
     asset_cols = ['Assets_mean', 'Assets_std', 'Assets_min', 'Assets_p25', 'Assets_p50', 'Assets_p75', 'Assets_max']
-    gain_cols = ['Gains_mean', 'Gains_std', 'Gains_min', 'Gains_p25', 'Gains_p50', 'Gains_p75', 'Gains_max']
+    accumulated_profit_cols = ['AccumulatedProfit_mean', 'AccumulatedProfit_std', 'AccumulatedProfit_min', 'AccumulatedProfit_p25', 'AccumulatedProfit_p50', 'AccumulatedProfit_p75', 'AccumulatedProfit_max']
     revenue_cols = ['Revenue_mean', 'Revenue_std', 'Revenue_min', 'Revenue_p25', 'Revenue_p50', 'Revenue_p75', 'Revenue_max']
-    summary_stats = summary_stats[asset_cols + gain_cols + revenue_cols]
+    summary_stats = summary_stats[asset_cols + accumulated_profit_cols + revenue_cols]
 
     return {
         "summary_stats": summary_stats,

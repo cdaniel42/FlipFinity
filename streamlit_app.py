@@ -9,7 +9,7 @@ import pandas as pd
 
 # Import core logic
 from simulation import run_monte_carlo_simulations
-from visualization import plot_asset_growth, plot_monthly_gains, plot_monthly_revenue
+from visualization import plot_asset_growth, plot_accumulated_profit, plot_monthly_revenue
 
 st.set_page_config(layout="wide") # Use wide layout for better plot display
 
@@ -19,6 +19,9 @@ st.sidebar.header("Simulation Parameters")
 
 # --- Input Widgets ---
 with st.sidebar.form(key='simulation_params'):
+    # Submit button moved to the top
+    run_button = st.form_submit_button(label='Run Simulation')
+
     st.subheader("Project Setup")
     sqm_buy_value_ke = st.number_input("SqM Buy Value (k€/sqm)", value=1.5, step=0.05, min_value=0.01)
     sqm_sell_value_ke = st.number_input("SqM Sell Value (k€/sqm)", value=2.0, step=0.05, min_value=0.01)
@@ -29,16 +32,14 @@ with st.sidebar.form(key='simulation_params'):
     starting_capital_ke = st.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0)
     financing_ratio_percent = st.slider("Financing Ratio (%)", min_value=0, max_value=100, value=90, step=1)
     interest_rate_percent = st.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0)
-    tax_rate_percent = st.slider("Tax Rate (%)", min_value=0, max_value=100, value=29, step=1)
+    TAX_RATE_FIXED = 29.0 # Define fixed tax rate
+    st.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}") # Display fixed rate
 
     st.subheader("Simulation Settings")
-    duration_jitter_percent = st.number_input("Duration Jitter (% +/-)", value=10.0, step=1.0, min_value=0.0)
+    duration_jitter_percent = st.number_input("Duration Jitter (% +/-)", value=20.0, step=1.0, min_value=0.0) # Default changed to 20
     sell_price_jitter_percent = st.number_input("Sell Price Jitter (% +/-)", value=10.0, step=1.0, min_value=0.0)
     total_simulation_months = st.number_input("Total Simulation Months", value=60, step=1, min_value=1)
-    num_simulations = st.number_input("Number of Simulations", value=500, step=50, min_value=10)
-
-    # Submit button for the form
-    run_button = st.form_submit_button(label='Run Simulation')
+    num_simulations = st.number_input("Number of Simulations", value=50, step=50, min_value=10) # Default changed to 50
 
 # --- Display Calculated Values (outside the form, updates instantly) ---
 st.sidebar.subheader("Calculated per Project")
@@ -64,7 +65,7 @@ if run_button:
         "project_duration_months": project_duration_months,
         "financing_ratio_percent": float(financing_ratio_percent), # Ensure slider value is float if needed
         "interest_rate_percent": interest_rate_percent,
-        "tax_rate_percent": float(tax_rate_percent), # Ensure slider value is float if needed
+        "tax_rate_percent": TAX_RATE_FIXED, # Use fixed tax rate
         "duration_jitter_percent": duration_jitter_percent,
         "sell_price_jitter_percent": sell_price_jitter_percent,
         "total_simulation_months": total_simulation_months,
@@ -89,13 +90,16 @@ if run_button:
 
         st.subheader("Visualizations")
 
-        # Generate and display plots
+        # Generate and display plots (Reordered)
+        # 1. Accumulated Profit After Tax
+        accumulated_profit_fig = plot_accumulated_profit(summary_stats)
+        st.plotly_chart(accumulated_profit_fig, use_container_width=True)
+
+        # 2. Asset Growth
         asset_growth_fig = plot_asset_growth(summary_stats)
         st.plotly_chart(asset_growth_fig, use_container_width=True)
 
-        monthly_gains_fig = plot_monthly_gains(summary_stats)
-        st.plotly_chart(monthly_gains_fig, use_container_width=True)
-
+        # 3. Monthly Revenue
         revenue_fig = plot_monthly_revenue(summary_stats)
         st.plotly_chart(revenue_fig, use_container_width=True)
 
