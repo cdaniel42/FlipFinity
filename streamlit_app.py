@@ -113,25 +113,36 @@ if all_vars_valid:
     TAX_RATE_FIXED = 29.0
     profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
 
-    # 10. Calculate Margin (based on new Total Project Cost)
-    margin_percent = (profit_after_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
+    # 10. Calculate Margins (based on new Total Project Cost)
+    margin_percent_before_tax = (profit_before_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
+    margin_percent_after_tax = (profit_after_tax_ke / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
 
     # --- Display Rows --- (Using the newly calculated values)
+    # Row 1: Project Cost | Capital Invest
     colA, colB = st.sidebar.columns(2)
     colA.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€") # Step 6
     colB.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€") # Step 7
 
+    # Row 2: Buy Value | Sell Value
     col1, col2 = st.sidebar.columns(2)
     col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€") # Step 1
     col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€") # Step 1
 
+    # Row 3: Reno Cost | Add. Costs
     col3, col4 = st.sidebar.columns(2)
     col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€") # Step 1
     col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€") # Step 5
 
+    # Row 4: Margins
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin (after Tax)", value=f"{margin_percent:.1f} %") # Step 10
-    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Step 9
+    col5.metric(label="Margin Before Tax", value=f"{margin_percent_before_tax:.1f} %") # Step 10
+    col6.metric(label="Margin After Tax", value=f"{margin_percent_after_tax:.1f} %") # Step 10
+
+    # Row 5: Profits
+    col7, col8 = st.sidebar.columns(2)
+    col7.metric(label="Profit Before Tax", value=f"{profit_before_tax_ke:.1f} k€") # Step 8
+    col8.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Step 9
+
 else:
     # Placeholder display
     colA, colB = st.sidebar.columns(2)
@@ -146,9 +157,15 @@ else:
     col3.metric(label="Total Reno Cost", value="...")
     col4.metric(label="Total Add. Costs", value="...")
 
+    # Placeholder Row 4: Margins
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin (%)", value="...")
-    col6.metric(label="Profit After Tax", value="...")
+    col5.metric(label="Margin Before Tax", value="...")
+    col6.metric(label="Margin After Tax", value="...")
+
+    # Placeholder Row 5: Profits
+    col7, col8 = st.sidebar.columns(2)
+    col7.metric(label="Profit Before Tax", value="...")
+    col8.metric(label="Profit After Tax", value="...")
 
 st.sidebar.markdown("---") # Separator
 
