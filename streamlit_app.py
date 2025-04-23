@@ -304,9 +304,12 @@ if run_button:
         st.write(summary_text)
 
         # Display additional cost metrics in M€
-        st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.3f} M€")
+        st.metric(label=f"Accumulated Profit over {project_duration_months} months", value=f"{profit_mean_me:.2f} M€")
+
+        # Display additional cost metrics in M€
+        st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.2f} M€")
         # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
-        st.metric(label="Mean Acc. Interest Costs", value=f"{interest_costs_mean_me:.3f} M€") # New label
+        st.metric(label="Mean Acc. Interest Costs", value=f"{interest_costs_mean_me:.2f} M€") # New label
 
         st.subheader("Visualizations")
 
