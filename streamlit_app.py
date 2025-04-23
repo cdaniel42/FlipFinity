@@ -71,8 +71,24 @@ if all_vars_valid:
     profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
     margin_percent = ((sell_value_ke - total_project_cost_ke - sale_tx_costs_ke) / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
 
+    # Calculate financing based on total upfront cost
+    financing_ratio = st.session_state.get('disp_finance_ratio', 90.0) / 100.0 # Need financing ratio
+    interest_rate_percent = st.session_state.get('disp_interest', 5.0) # Need interest rate
+    project_duration_months = st.session_state.get('disp_duration', 9) # Need duration
+
+    financed_per_project_ke = total_project_cost_ke * financing_ratio
+    equity_per_project_ke = total_project_cost_ke - financed_per_project_ke
+
+    # Estimate interest for this single project's loan over its duration
+    monthly_interest_rate = (interest_rate_percent / 100.0) / 12.0
+    estimated_interest_ke = financed_per_project_ke * monthly_interest_rate * project_duration_months
+
+    # Calculate Total Capital Invest (Equity + Estimated Interest)
+    total_capital_invest_ke = equity_per_project_ke + estimated_interest_ke
+
     # Display Rows with Formatting
     st.sidebar.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€")
+    st.sidebar.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€")
     st.sidebar.markdown("&nbsp;")
 
     col1, col2 = st.sidebar.columns(2)
@@ -89,6 +105,7 @@ if all_vars_valid:
 else:
     # Placeholder display
     st.sidebar.metric(label="Total Project Cost", value="...")
+    st.sidebar.metric(label="Est. Capital Invest", value="...")
     st.sidebar.markdown("&nbsp;")
 
     col1, col2 = st.sidebar.columns(2)
@@ -117,10 +134,10 @@ agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of
 agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_sell')
 
 st.sidebar.subheader("Project Timing & Finance")
-project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1)
+project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1, key='disp_duration')
 starting_capital_ke = st.sidebar.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0)
-financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1)
-interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0)
+financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1, key='disp_finance_ratio')
+interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0, key='disp_interest')
 hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld')
 st.sidebar.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}")
 
