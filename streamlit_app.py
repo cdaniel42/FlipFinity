@@ -18,68 +18,100 @@ st.title("FlipFinity Business Simulator")
 
 st.sidebar.header("Simulation Parameters")
 
-# --- Run Button (Moved to very top) ---
+# --- Run Button (Top) ---
 run_button = st.sidebar.button("Run Simulation", key='run_sim_button_top')
-
-# --- Display Calculated Values (Below Button) ---
-st.sidebar.subheader("Calculated per Project")
-# Need to get widget values - define widgets later, access state here if possible
-# This section will now depend on the widgets defined *below* it.
-# We use st.session_state.get to safely access values that might not exist on the first run.
-sqm_buy_value_ke_disp = st.session_state.get('disp_buy_val', 2.0)
-sqm_sell_value_ke_disp = st.session_state.get('disp_sell_val', 3.0)
-total_sqm_disp = st.session_state.get('disp_sqm_val', 100.0)
-renovation_cost_per_sqm_eur_disp = st.session_state.get('disp_reno_val', 500.0)
-
-if (
-    isinstance(sqm_buy_value_ke_disp, (int, float)) and sqm_buy_value_ke_disp > 0 and
-    isinstance(total_sqm_disp, (int, float)) and total_sqm_disp > 0 and
-    isinstance(sqm_sell_value_ke_disp, (int, float)) and
-    isinstance(renovation_cost_per_sqm_eur_disp, (int, float))
-):
-    renovation_cost_per_sqm_ke_disp = renovation_cost_per_sqm_eur_disp / 1000.0
-    total_buy_cost = sqm_buy_value_ke_disp * total_sqm_disp
-    total_reno_cost = renovation_cost_per_sqm_ke_disp * total_sqm_disp
-    total_project_cost = total_buy_cost + total_reno_cost
-    total_sell_value = sqm_sell_value_ke_disp * total_sqm_disp
-    margin = ((total_sell_value - total_project_cost) / total_project_cost) * 100 if total_project_cost > 0 else 0
-
-    # Display metrics sequentially in a single column
-    st.sidebar.metric(label="Total Buy Value", value=f"{total_buy_cost:.2f} k€")
-    st.sidebar.metric(label="Total Renovation Cost", value=f"{total_reno_cost:.2f} k€")
-    st.sidebar.metric(label="Total Sell Value", value=f"{total_sell_value:.2f} k€")
-    st.sidebar.metric(label="Margin (on Total Cost)", value=f"{margin:.2f} %")
-else:
-    # Placeholder display in single column
-    st.sidebar.metric(label="Total Buy Value", value="...")
-    st.sidebar.metric(label="Total Renovation Cost", value="...")
-    st.sidebar.metric(label="Total Sell Value", value="...")
-    st.sidebar.metric(label="Margin (on Total Cost)", value="...")
 
 st.sidebar.markdown("---") # Separator
 
-# --- All Input Widgets (Defined AFTER button and calculations) ---
-st.sidebar.subheader("Project Setup")
-sqm_buy_value_ke = st.sidebar.number_input("SqM Buy Value (k€/sqm)", value=2.0, step=0.05, min_value=0.01, key='disp_buy_val') # Use key for session state access
+# --- Inputs for Dynamic Calculation (Define BEFORE display) ---
+st.sidebar.subheader("Per-Project Values")
+sqm_buy_value_ke = st.sidebar.number_input("SqM Buy Value (k€/sqm)", value=2.0, step=0.05, min_value=0.01, key='disp_buy_val')
 sqm_sell_value_ke = st.sidebar.number_input("SqM Sell Value (k€/sqm)", value=3.0, step=0.05, min_value=0.01, key='disp_sell_val')
 total_sqm = st.sidebar.number_input("Total SqM per Project", value=100.0, step=10.0, min_value=1.0, key='disp_sqm_val')
-renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=500.0, step=50.0, min_value=0.0, key='disp_reno_val', help="Enter renovation cost in EURO per square meter.")
-project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1)
+renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=500.0, step=50.0, min_value=0.0, key='disp_reno_val')
+# Move Transaction Cost % Inputs Here
+land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax')
+notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy)", value=1.5, step=0.1, min_value=0.0, key='disp_notary')
+agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_buy')
+agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_sell')
+TAX_RATE_FIXED = 29.0 # Needed for profit calc
 
-st.sidebar.subheader("Project Timing & Finance") # Renamed Subheader
+# --- Display Calculated Values (Restructured) ---
+st.sidebar.subheader("Calculated Totals per Project")
+# Use locals() to easily check if all needed vars are defined and numeric
+required_vars = [
+    'sqm_buy_value_ke', 'sqm_sell_value_ke', 'total_sqm', 'renovation_cost_per_sqm_eur',
+    'land_transfer_tax_percent', 'notary_fee_percent', 'agent_fee_purchase_percent', 'agent_fee_sale_percent'
+]
+all_vars_valid = True
+for var_name in required_vars:
+    val = locals().get(var_name)
+    if not isinstance(val, (int, float)) or (var_name == 'total_sqm' and val <= 0) or (var_name == 'sqm_buy_value_ke' and val <= 0):
+        all_vars_valid = False
+        break
+
+if all_vars_valid:
+    # Calculations
+    buy_value_ke = sqm_buy_value_ke * total_sqm
+    sell_value_ke = sqm_sell_value_ke * total_sqm
+    reno_cost_ke = (renovation_cost_per_sqm_eur / 1000.0) * total_sqm
+
+    purchase_tx_costs_ke = buy_value_ke * (
+        (land_transfer_tax_percent + notary_fee_percent + agent_fee_purchase_percent) / 100.0
+    )
+    sale_tx_costs_ke = sell_value_ke * (agent_fee_sale_percent / 100.0)
+    total_additional_costs_ke = purchase_tx_costs_ke + sale_tx_costs_ke
+
+    total_project_cost_ke = buy_value_ke + reno_cost_ke + purchase_tx_costs_ke
+    profit_before_tax_ke = sell_value_ke - total_project_cost_ke - sale_tx_costs_ke
+    profit_after_tax_ke = profit_before_tax_ke * (1 - (TAX_RATE_FIXED / 100.0))
+    margin_percent = ((sell_value_ke - total_project_cost_ke - sale_tx_costs_ke) / total_project_cost_ke) * 100 if total_project_cost_ke > 0 else 0
+
+    # Row 1
+    col1, col2 = st.sidebar.columns(2)
+    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.2f} k€")
+    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.2f} k€")
+
+    # Row 2
+    col3, col4 = st.sidebar.columns(2)
+    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.2f} k€")
+    col4.metric(label="Total Add. Costs (Fees/Tax)", value=f"{total_additional_costs_ke:.2f} k€")
+
+    # Row 3
+    col5, col6 = st.sidebar.columns(2)
+    col5.metric(label="Margin (on Total Cost)", value=f"{margin_percent:.2f} %")
+    col6.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.2f} k€")
+else:
+    st.sidebar.warning("Enter valid numeric inputs above to see calculated totals.")
+    # Placeholder display
+    col1, col2 = st.sidebar.columns(2)
+    col1.metric(label="Total Buy Value", value="...")
+    col2.metric(label="Total Sell Value", value="...")
+    col3, col4 = st.sidebar.columns(2)
+    col3.metric(label="Total Reno Cost", value="...")
+    col4.metric(label="Total Add. Costs", value="...")
+    col5, col6 = st.sidebar.columns(2)
+    col5.metric(label="Margin (%)", value="...")
+    col6.metric(label="Profit After Tax", value="...")
+
+st.sidebar.markdown("---") # Separator
+
+# --- Remaining Input Widgets ---
+st.sidebar.subheader("Project Timing & Finance")
+project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1)
 starting_capital_ke = st.sidebar.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0)
 financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1)
 interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0)
-TAX_RATE_FIXED = 29.0
+hansgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld')
+# Tax Rate Display (Fixed)
 st.sidebar.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}")
-# Add Hausgeld input
-hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld') # Default 400, Added key
 
-st.sidebar.subheader("Transaction Costs (%)") # New Subheader
-land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy Value)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax') # Default 6.5, Added key
-notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy Value)", value=1.5, step=0.1, min_value=0.0)
-agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy Value)", value=3.57, step=0.1, min_value=0.0)
-agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell Value)", value=3.57, step=0.1, min_value=0.0)
+# REMOVE Transaction Costs from here as they are now defined above
+# st.sidebar.subheader("Transaction Costs (%)")
+# land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy Value)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax')
+# notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy Value)", value=1.5, step=0.1, min_value=0.0)
+# agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy Value)", value=3.57, step=0.1, min_value=0.0)
+# agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell Value)", value=3.57, step=0.1, min_value=0.0)
 
 st.sidebar.subheader("Simulation Settings")
 duration_jitter_percent = st.sidebar.number_input("Duration Jitter (% +/-)", value=20.0, step=1.0, min_value=0.0)
@@ -134,20 +166,20 @@ if run_button:
         "sqm_buy_value_ke": sqm_buy_value_ke,
         "sqm_sell_value_ke": sqm_sell_value_ke,
         "total_sqm": total_sqm,
-        "renovation_cost_per_sqm_ke": renovation_cost_per_sqm_eur / 1000.0, # Convert the value from the widget
+        "renovation_cost_per_sqm_ke": renovation_cost_per_sqm_eur / 1000.0,
         "project_duration_months": project_duration_months,
         "financing_ratio_percent": float(financing_ratio_percent),
         "interest_rate_percent": interest_rate_percent,
         "tax_rate_percent": TAX_RATE_FIXED,
-        "duration_jitter_percent": duration_jitter_percent,
-        "sell_price_jitter_percent": sell_price_jitter_percent,
-        "total_simulation_months": total_simulation_months,
-        "num_simulations": num_simulations,
-        "hausgeld_eur_per_month": hausgeld_eur_per_month,
+        "hausgeld_eur_per_month": hansgeld_eur_per_month,
         "land_transfer_tax_percent": land_transfer_tax_percent,
         "notary_fee_percent": notary_fee_percent,
         "agent_fee_purchase_percent": agent_fee_purchase_percent,
-        "agent_fee_sale_percent": agent_fee_sale_percent
+        "agent_fee_sale_percent": agent_fee_sale_percent,
+        "duration_jitter_percent": duration_jitter_percent,
+        "sell_price_jitter_percent": sell_price_jitter_percent,
+        "total_simulation_months": total_simulation_months,
+        "num_simulations": num_simulations
     }
 
     try:
