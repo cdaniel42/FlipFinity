@@ -10,7 +10,7 @@ import numpy as np # Needed for linear interpolation
 
 # Import core logic
 from simulation import run_monte_carlo_simulations
-from visualization import plot_asset_growth, plot_accumulated_profit, plot_monthly_revenue
+from visualization import plot_active_projects, plot_accumulated_profit, plot_monthly_revenue
 
 st.set_page_config(layout="wide", initial_sidebar_state="expanded") # Use wide layout & expanded sidebar
 
@@ -280,6 +280,7 @@ if run_button:
         tx_costs_mean_ke = final_month_stats.get('AccumulatedTxCosts_mean', 0.0)
         # hold_costs_mean_ke = final_month_stats.get('AccumulatedHoldCosts_mean', 0.0) # Old name
         interest_costs_mean_ke = final_month_stats.get('AccumulatedInterestCosts_mean', 0.0) # New name
+        active_projects_mean = final_month_stats.get('ActiveProjects_mean', 0.0) # Get new value
 
         # Convert to M€ for display
         assets_mean_me = assets_mean_ke / 1000.0
@@ -292,9 +293,9 @@ if run_button:
 
         summary_text = (
             f"After {total_simulation_months} months, estimated final assets: "
-            f"{assets_mean_me:.2f} M€ (Std Dev: {assets_std_me:.2f} M€). "
-            f"Median final assets: {assets_p50_me:.2f} M€. "
-            f"Mean Accumulated Profit: {profit_mean_me:.2f} M€."
+            # f"{assets_mean_me:.2f} M€ (Std Dev: {assets_std_me:.2f} M€). "
+            # f"Median final assets: {assets_p50_me:.2f} M€. "
+            # f"Mean Accumulated Profit: {profit_mean_me:.2f} M€."
         )
 
         st.subheader("Summary")
@@ -304,23 +305,27 @@ if run_button:
         st.write(summary_text)
 
         # Display additional cost metrics in M€
-        st.metric(label=f"Accumulated Profit over {project_duration_months} months", value=f"{profit_mean_me:.2f} M€")
+        st.metric(label=f"Accumulated Profit over {total_simulation_months} months", value=f"{profit_mean_me:.2f} M€")
+        # Add Active Projects Metric
+        st.metric(label=f"Mean Active Projects at Month {total_simulation_months}", value=f"{active_projects_mean:.1f}") # Display new metric
 
-        # Display additional cost metrics in M€
         st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.2f} M€")
         # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
         st.metric(label="Mean Acc. Interest Costs", value=f"{interest_costs_mean_me:.2f} M€") # New label
 
         st.subheader("Visualizations")
 
-        # Regenerate plots (assuming visualization functions are updated)
-        asset_growth_fig = plot_asset_growth(summary_stats) # Pass original k€ data
-        st.plotly_chart(asset_growth_fig, use_container_width=True)
+        # Regenerate plots
+        # Replace asset growth with active projects
+        # asset_growth_fig = plot_asset_growth(summary_stats)
+        # st.plotly_chart(asset_growth_fig, use_container_width=True)
+        active_projects_fig = plot_active_projects(summary_stats)
+        st.plotly_chart(active_projects_fig, use_container_width=True)
 
-        accumulated_profit_fig = plot_accumulated_profit(summary_stats) # Pass original k€ data
+        accumulated_profit_fig = plot_accumulated_profit(summary_stats)
         st.plotly_chart(accumulated_profit_fig, use_container_width=True)
 
-        revenue_fig = plot_monthly_revenue(summary_stats) # Pass original k€ data
+        revenue_fig = plot_monthly_revenue(summary_stats)
         st.plotly_chart(revenue_fig, use_container_width=True)
 
         # Optionally display summary stats table (still in k€)

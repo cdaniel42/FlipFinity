@@ -8,14 +8,14 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def plot_asset_growth(summary_stats: pd.DataFrame) -> go.Figure:
+def plot_active_projects(summary_stats: pd.DataFrame) -> go.Figure:
     """
-    Generates a Plotly figure showing the mean asset growth over time
+    Generates a Plotly figure showing the mean number of active projects over time
     with a shaded region representing +/- 1 standard deviation.
 
     Args:
         summary_stats: DataFrame containing aggregated simulation results,
-                       including 'Assets_mean' and 'Assets_std' columns,
+                       including 'ActiveProjects_mean' and 'ActiveProjects_std' columns,
                        indexed by month.
 
     Returns:
@@ -24,41 +24,42 @@ def plot_asset_growth(summary_stats: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
 
     # Ensure standard deviation is non-negative
-    summary_stats['Assets_std_non_negative'] = summary_stats['Assets_std'].fillna(0).clip(lower=0)
+    summary_stats['ActiveProjects_std_non_negative'] = summary_stats['ActiveProjects_std'].fillna(0).clip(lower=0)
 
     # Calculate upper and lower bounds for the shaded area (+/- 1 std dev)
-    upper_bound = summary_stats['Assets_mean'] + summary_stats['Assets_std_non_negative']
-    lower_bound = summary_stats['Assets_mean'] - summary_stats['Assets_std_non_negative']
+    upper_bound = summary_stats['ActiveProjects_mean'] + summary_stats['ActiveProjects_std_non_negative']
+    lower_bound = (summary_stats['ActiveProjects_mean'] - summary_stats['ActiveProjects_std_non_negative']).clip(lower=0) # Ensure count doesn't go below 0
 
     # Add the shaded area for standard deviation
-    # Need x values (months) for both lower and upper bounds
     x_months = summary_stats.index.tolist()
     fig.add_trace(go.Scatter(
         x=x_months + x_months[::-1], # x, then x reversed
         y=upper_bound.tolist() + lower_bound[::-1].tolist(), # upper, then lower reversed
         fill='toself',
-        fillcolor='rgba(0,100,80,0.2)', # Example color, adjust as needed
+        fillcolor='rgba(76, 175, 80, 0.2)', # Example color (green)
         line=dict(color='rgba(255,255,255,0)'), # No border line for the fill
         hoverinfo="skip",
         showlegend=False,
         name='Std Dev Range'
     ))
 
-    # Add the mean asset growth line
+    # Add the mean active projects line
     fig.add_trace(go.Scatter(
         x=x_months,
-        y=summary_stats['Assets_mean'],
+        y=summary_stats['ActiveProjects_mean'],
         mode='lines',
-        line=dict(color='rgb(0,100,80)'), # Example color
-        name='Mean Assets'
+        line=dict(color='rgb(76, 175, 80)'), # Example color (green)
+        name='Mean Active Projects'
     ))
 
     fig.update_layout(
-        title='Simulated Asset Growth Over Time',
+        title='Simulated Active Projects Over Time',
         xaxis_title='Month',
-        yaxis_title='Total Assets (M€)',
+        yaxis_title='Number of Active Projects', # No unit
         hovermode="x unified"
     )
+    # Ensure y-axis starts at 0
+    fig.update_yaxes(rangemode='tozero')
 
     return fig
 
@@ -172,27 +173,28 @@ def plot_monthly_revenue(summary_stats: pd.DataFrame) -> go.Figure:
 if __name__ == '__main__':
     # Create dummy summary_stats data similar to what simulation.py produces
     months = range(1, 61)
-    assets_mean = [60 + i * 1.5 + np.random.randn() * i * 0.1 for i in months]
+    # assets_mean = [60 + i * 1.5 + np.random.randn() * i * 0.1 for i in months]
     accumulated_profit_mean = np.cumsum([0.8 + np.random.randn() * 0.4 for i in months]) # Dummy profit accumulation
+    active_projects_mean = np.random.randint(1, 5, size=len(months)) + np.linspace(0, 3, len(months))
     dummy_data = {
-        'Assets_mean': assets_mean,
-        'Assets_std': [max(0, 5 + i * 0.5 + np.random.randn() * i * 0.05) for i in months],
+        # 'Assets_mean': assets_mean,
+        # 'Assets_std': [max(0, 5 + i * 0.5 + np.random.randn() * i * 0.05) for i in months],
         'AccumulatedProfit_mean': accumulated_profit_mean,
         'AccumulatedProfit_std': [max(0, 1 + i*0.1 + np.random.randn() * i*0.02) for i in range(len(months))],
         'Revenue_mean': [10 + i*0.2 + np.random.randn() * 2 for i in months],
-        'Revenue_std': [max(0, 2 + np.random.randn() * 0.5) for i in months]
+        'Revenue_std': [max(0, 2 + np.random.randn() * 0.5) for i in months],
+        'ActiveProjects_mean': active_projects_mean,
+        'ActiveProjects_std': [max(0, 0.5 + np.random.rand() * 1.5) for _ in months]
     }
-    # Manually add percentile columns if needed for testing other functions that might rely on them
-    # For simplicity, just creating the core mean/std columns here
     dummy_summary_stats = pd.DataFrame(dummy_data, index=pd.Index(months, name='Month'))
 
     print("Generating example plots...")
 
-    # Generate and show Asset Growth plot
-    asset_fig = plot_asset_growth(dummy_summary_stats)
-    print("Asset Growth Plot JSON (first 500 chars):")
-    print(asset_fig.to_json()[:500] + "...")
-    # asset_fig.show()
+    # Generate and show Active Projects plot
+    active_projects_fig = plot_active_projects(dummy_summary_stats)
+    print("Active Projects Plot JSON (first 500 chars):")
+    print(active_projects_fig.to_json()[:500] + "...")
+    # active_projects_fig.show()
 
     # Generate and show Accumulated Profit plot
     accumulated_profit_fig = plot_accumulated_profit(dummy_summary_stats)

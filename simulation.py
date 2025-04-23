@@ -191,6 +191,7 @@ def run_single_simulation(
         total_equity_in_projects = sum(p['equity_invested'] for p in active_projects)
         current_total_assets = liquid_capital + total_equity_in_projects
         monthly_net_gain = current_total_assets - previous_total_assets
+        active_projects_count = len(active_projects) # Get current count
 
         monthly_results.append({
             'Month': month,
@@ -204,7 +205,8 @@ def run_single_simulation(
             'Accumulated_Interest_Costs_kE': accumulated_interest_costs_ke,
             'Monthly_Revenue_kE': monthly_revenue_accumulator,
             'Projects_Started': projects_started_this_month,
-            'Projects_Completed': len(completed_this_month)
+            'Projects_Completed': len(completed_this_month),
+            'Active_Projects_Count': active_projects_count # Record count
         })
 
     return pd.DataFrame(monthly_results)
@@ -281,6 +283,7 @@ def run_monte_carlo_simulations(
     all_revenue = pd.concat([df.set_index('Month')['Monthly_Revenue_kE'] for df in all_results_list], axis=1)
     all_tx_costs = pd.concat([df.set_index('Month')['Accumulated_Transaction_Costs_kE'] for df in all_results_list], axis=1)
     all_interest_costs = pd.concat([df.set_index('Month')['Accumulated_Interest_Costs_kE'] for df in all_results_list], axis=1)
+    all_active_projects = pd.concat([df.set_index('Month')['Active_Projects_Count'] for df in all_results_list], axis=1) # Aggregate new column
 
     # Calculate summary statistics
     asset_stats = all_assets.agg(['mean', 'std', 'min', 'max'], axis=1)
@@ -288,6 +291,7 @@ def run_monte_carlo_simulations(
     revenue_stats = all_revenue.agg(['mean', 'std', 'min', 'max'], axis=1)
     tx_cost_stats = all_tx_costs.agg(['mean', 'std', 'min', 'max'], axis=1)
     interest_cost_stats = all_interest_costs.agg(['mean', 'std', 'min', 'max'], axis=1)
+    active_projects_stats = all_active_projects.agg(['mean', 'std', 'min', 'max'], axis=1) # Calculate stats
 
     # Calculate percentiles separately
     asset_stats['p25'] = all_assets.quantile(0.25, axis=1)
@@ -311,13 +315,18 @@ def run_monte_carlo_simulations(
     interest_cost_stats['p50'] = all_interest_costs.quantile(0.50, axis=1)
     interest_cost_stats['p75'] = all_interest_costs.quantile(0.75, axis=1)
 
+    active_projects_stats['p25'] = all_active_projects.quantile(0.25, axis=1) # Calculate percentiles
+    active_projects_stats['p50'] = all_active_projects.quantile(0.50, axis=1)
+    active_projects_stats['p75'] = all_active_projects.quantile(0.75, axis=1)
+
     # Combine stats
     summary_stats = pd.concat([
         asset_stats.add_prefix('Assets_'),
         accumulated_profit_stats.add_prefix('AccumulatedProfit_'),
         revenue_stats.add_prefix('Revenue_'),
         tx_cost_stats.add_prefix('AccumulatedTxCosts_'),
-        interest_cost_stats.add_prefix('AccumulatedInterestCosts_')
+        interest_cost_stats.add_prefix('AccumulatedInterestCosts_'),
+        active_projects_stats.add_prefix('ActiveProjects_') # Add new stats
     ], axis=1)
 
     # Reorder columns
@@ -326,7 +335,8 @@ def run_monte_carlo_simulations(
     revenue_cols = ['Revenue_mean', 'Revenue_std', 'Revenue_min', 'Revenue_p25', 'Revenue_p50', 'Revenue_p75', 'Revenue_max']
     tx_cost_cols = ['AccumulatedTxCosts_mean', 'AccumulatedTxCosts_std', 'AccumulatedTxCosts_min', 'AccumulatedTxCosts_p25', 'AccumulatedTxCosts_p50', 'AccumulatedTxCosts_p75', 'AccumulatedTxCosts_max']
     interest_cost_cols = ['AccumulatedInterestCosts_mean', 'AccumulatedInterestCosts_std', 'AccumulatedInterestCosts_min', 'AccumulatedInterestCosts_p25', 'AccumulatedInterestCosts_p50', 'AccumulatedInterestCosts_p75', 'AccumulatedInterestCosts_max']
-    summary_stats = summary_stats[asset_cols + accumulated_profit_cols + revenue_cols + tx_cost_cols + interest_cost_cols]
+    active_projects_cols = ['ActiveProjects_mean', 'ActiveProjects_std', 'ActiveProjects_min', 'ActiveProjects_p25', 'ActiveProjects_p50', 'ActiveProjects_p75', 'ActiveProjects_max'] # Define columns
+    summary_stats = summary_stats[asset_cols + accumulated_profit_cols + revenue_cols + tx_cost_cols + interest_cost_cols + active_projects_cols] # Add to final order
 
     return {
         "summary_stats": summary_stats,
