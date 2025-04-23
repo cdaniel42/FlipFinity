@@ -220,6 +220,11 @@ def display_star_rating(rating: float):
 if run_button:
     st.header("Simulation Results")
     # Prepare parameters dictionary using the widget state variables
+    # Access values directly via their variable names defined by widgets above
+
+    # Calculate total hausgeld for the simulation input
+    total_hausgeld_for_sim_ke = (hausgeld_eur_per_month / 1000.0) * project_duration_months
+
     params = {
         "starting_capital_ke": starting_capital_ke,
         "sqm_buy_value_ke": sqm_buy_value_ke,
@@ -230,7 +235,8 @@ if run_button:
         "financing_ratio_percent": float(financing_ratio_percent),
         "interest_rate_percent": interest_rate_percent,
         "tax_rate_percent": TAX_RATE_FIXED,
-        "hausgeld_eur_per_month": hausgeld_eur_per_month,
+        # "hausgeld_eur_per_month": hausgeld_eur_per_month, # Removed
+        "hausgeld_total_per_project_ke": total_hausgeld_for_sim_ke, # Added total
         "land_transfer_tax_percent": land_transfer_tax_percent,
         "notary_fee_percent": notary_fee_percent,
         "agent_fee_purchase_percent": agent_fee_purchase_percent,
@@ -255,7 +261,8 @@ if run_button:
         assets_p50_ke = final_month_stats.get('Assets_p50', 0.0)
         profit_mean_ke = final_month_stats.get('AccumulatedProfit_mean', 0.0)
         tx_costs_mean_ke = final_month_stats.get('AccumulatedTxCosts_mean', 0.0)
-        hold_costs_mean_ke = final_month_stats.get('AccumulatedHoldCosts_mean', 0.0)
+        # hold_costs_mean_ke = final_month_stats.get('AccumulatedHoldCosts_mean', 0.0) # Old name
+        interest_costs_mean_ke = final_month_stats.get('AccumulatedInterestCosts_mean', 0.0) # New name
 
         # Convert to M€ for display
         assets_mean_me = assets_mean_ke / 1000.0
@@ -263,7 +270,8 @@ if run_button:
         assets_p50_me = assets_p50_ke / 1000.0
         profit_mean_me = profit_mean_ke / 1000.0
         tx_costs_mean_me = tx_costs_mean_ke / 1000.0
-        hold_costs_mean_me = hold_costs_mean_ke / 1000.0
+        # hold_costs_mean_me = hold_costs_mean_ke / 1000.0 # Old name
+        interest_costs_mean_me = interest_costs_mean_ke / 1000.0 # New name
 
         summary_text = (
             f"After {total_simulation_months} months, estimated final assets: "
@@ -279,9 +287,9 @@ if run_button:
         st.write(summary_text)
 
         # Display additional cost metrics in M€
-        st.metric(label="Mean Acc. Accumulated Profit", value=f"{profit_mean_me:.2f} M€")
-        st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.2f} M€")
-        st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.2f} M€")
+        st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.3f} M€")
+        # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
+        st.metric(label="Mean Acc. Interest Costs", value=f"{interest_costs_mean_me:.3f} M€") # New label
 
         st.subheader("Visualizations")
 
