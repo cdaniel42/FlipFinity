@@ -19,13 +19,17 @@ st.sidebar.header("Simulation Parameters")
 
 # --- Input Widgets ---
 with st.sidebar.form(key='simulation_params'):
-    # Submit button moved to the top
+    # Submit button for the form
     run_button = st.form_submit_button(label='Run Simulation')
 
     st.subheader("Project Setup")
     sqm_buy_value_ke = st.number_input("SqM Buy Value (k€/sqm)", value=1.5, step=0.05, min_value=0.01)
     sqm_sell_value_ke = st.number_input("SqM Sell Value (k€/sqm)", value=2.0, step=0.05, min_value=0.01)
     total_sqm = st.number_input("Total SqM per Project", value=100.0, step=10.0, min_value=1.0)
+    renovation_cost_per_sqm_ke = st.number_input(
+        "Renovation Cost (k€/sqm)",
+        value=0.2, step=0.05, min_value=0.0, key='renovation_input'
+    )
     project_duration_months = st.number_input("Project Duration (months)", value=9, step=1, min_value=1)
 
     st.subheader("Financials")
@@ -41,15 +45,31 @@ with st.sidebar.form(key='simulation_params'):
     total_simulation_months = st.number_input("Total Simulation Months", value=60, step=1, min_value=1)
     num_simulations = st.number_input("Number of Simulations", value=50, step=50, min_value=10) # Default changed to 50
 
-# --- Display Calculated Values (outside the form, updates instantly) ---
+# --- Display Calculated Values (Moved below the form) ---
 st.sidebar.subheader("Calculated per Project")
+# Need access to renovation_cost_per_sqm_ke which is inside the form scope
+# We need to get it from the session state if we want instant updates, or perform calculation only after submit
+# For simplicity with instant update, let's retrieve it here IF it exists (might not on first load)
+renovation_cost = st.session_state.get('renovation_input', 0.0) # Assuming we give the input a key
+
 if sqm_buy_value_ke > 0 and total_sqm > 0:
-    total_buy = sqm_buy_value_ke * total_sqm
-    total_sell = sqm_sell_value_ke * total_sqm
-    margin = ((total_sell - total_buy) / total_buy) * 100 if total_buy > 0 else 0
-    st.sidebar.metric(label="Total Buy Value", value=f"{total_buy:.2f} k€")
-    st.sidebar.metric(label="Total Sell Value", value=f"{total_sell:.2f} k€")
-    st.sidebar.metric(label="Margin", value=f"{margin:.2f} %")
+    # Use the current values from the widgets directly for instant updates
+    current_buy_sqm = sqm_buy_value_ke
+    current_sell_sqm = sqm_sell_value_ke
+    current_reno_sqm = renovation_cost_per_sqm_ke # This is now defined before this block
+    current_total_sqm = total_sqm
+
+    total_buy_cost = current_buy_sqm * current_total_sqm
+    total_reno_cost = current_reno_sqm * current_total_sqm
+    total_project_cost = total_buy_cost + total_reno_cost # Cost including renovation
+    total_sell_value = current_sell_sqm * current_total_sqm
+
+    margin = ((total_sell_value - total_project_cost) / total_project_cost) * 100 if total_project_cost > 0 else 0
+
+    st.sidebar.metric(label="Total Buy Value", value=f"{total_buy_cost:.2f} k€")
+    st.sidebar.metric(label="Total Renovation Cost", value=f"{total_reno_cost:.2f} k€") # Added Reno Cost
+    st.sidebar.metric(label="Total Sell Value", value=f"{total_sell_value:.2f} k€")
+    st.sidebar.metric(label="Margin (on Total Cost)", value=f"{margin:.2f} %") # Clarified Margin base
 else:
     st.sidebar.text("Enter valid buy value and sqm.")
 
@@ -62,6 +82,7 @@ if run_button:
         "sqm_buy_value_ke": sqm_buy_value_ke,
         "sqm_sell_value_ke": sqm_sell_value_ke,
         "total_sqm": total_sqm,
+        "renovation_cost_per_sqm_ke": renovation_cost_per_sqm_ke,
         "project_duration_months": project_duration_months,
         "financing_ratio_percent": float(financing_ratio_percent), # Ensure slider value is float if needed
         "interest_rate_percent": interest_rate_percent,

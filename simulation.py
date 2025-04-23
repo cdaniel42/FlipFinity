@@ -14,6 +14,7 @@ def run_single_simulation(
     sqm_buy_value_ke: float,
     sqm_sell_value_ke: float,
     total_sqm: float,
+    renovation_cost_per_sqm_ke: float,
     project_duration_months: int,
     financing_ratio_percent: float,
     interest_rate_percent: float, # Annual interest rate
@@ -30,6 +31,7 @@ def run_single_simulation(
         sqm_buy_value_ke: Cost per square meter for acquisition in k€.
         sqm_sell_value_ke: Expected selling price per square meter in k€.
         total_sqm: Total square meters per project.
+        renovation_cost_per_sqm_ke: Cost per square meter for renovation in k€.
         project_duration_months: Expected duration of a single project in months.
         financing_ratio_percent: The percentage of the project cost financed by loans.
         interest_rate_percent: Annual interest rate for loans.
@@ -49,6 +51,8 @@ def run_single_simulation(
         raise ValueError("Tax rate must be between 0 and 100.")
     if interest_rate_percent < 0:
         raise ValueError("Interest rate cannot be negative.")
+    if renovation_cost_per_sqm_ke < 0:
+        raise ValueError("Renovation cost cannot be negative.")
 
     financing_ratio = financing_ratio_percent / 100.0
     tax_rate = tax_rate_percent / 100.0
@@ -56,9 +60,9 @@ def run_single_simulation(
     duration_jitter_ratio = duration_jitter_percent / 100.0
     sell_price_jitter_ratio = sell_price_jitter_percent / 100.0
 
-    project_cost_ke = sqm_buy_value_ke * total_sqm
+    project_cost_ke = (sqm_buy_value_ke + renovation_cost_per_sqm_ke) * total_sqm
     if project_cost_ke <= 0:
-        raise ValueError("Project cost must be positive.")
+        raise ValueError("Project cost (including renovation) must be positive.")
 
     financed_per_project_ke = project_cost_ke * financing_ratio
     equity_per_project_ke = project_cost_ke - financed_per_project_ke
@@ -159,6 +163,7 @@ def run_monte_carlo_simulations(
     sqm_buy_value_ke: float,
     sqm_sell_value_ke: float,
     total_sqm: float,
+    renovation_cost_per_sqm_ke: float,
     project_duration_months: int,
     financing_ratio_percent: float,
     interest_rate_percent: float,
@@ -191,6 +196,7 @@ def run_monte_carlo_simulations(
             sqm_buy_value_ke=sqm_buy_value_ke,
             sqm_sell_value_ke=sqm_sell_value_ke,
             total_sqm=total_sqm,
+            renovation_cost_per_sqm_ke=renovation_cost_per_sqm_ke,
             project_duration_months=project_duration_months,
             financing_ratio_percent=financing_ratio_percent,
             interest_rate_percent=interest_rate_percent,
@@ -257,6 +263,7 @@ if __name__ == '__main__':
         sqm_buy_value_ke=1.5, # Example value
         sqm_sell_value_ke=2.0, # Example value
         total_sqm=100.0, # Example value
+        renovation_cost_per_sqm_ke=0.5, # Example value
         project_duration_months=9,
         financing_ratio_percent=90.0,
         interest_rate_percent=5.0,
