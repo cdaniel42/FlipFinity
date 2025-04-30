@@ -39,6 +39,16 @@ initialize_state_if_missing('disp_duration', 9)
 initialize_state_if_missing('disp_finance_ratio', 90.0)
 initialize_state_if_missing('disp_interest', 5.0)
 initialize_state_if_missing('disp_hausgeld_monthly', 400.0) # Add Hausgeld
+# Add keys for other inputs needed for simulation
+initialize_state_if_missing('disp_start_capital', 60.0)
+initialize_state_if_missing('disp_dur_jitter', 20.0)
+initialize_state_if_missing('disp_sell_jitter', 10.0)
+initialize_state_if_missing('disp_sim_months', 60)
+initialize_state_if_missing('disp_num_sim', 200)
+
+# Initialize state for simulation results
+initialize_state_if_missing('latest_summary_stats', None)
+initialize_state_if_missing('is_full_simulation', False)
 
 # --- Display Calculated Values (Below Button - Reads from initialized state) ---
 st.sidebar.subheader("Berechnete Summen pro Projekt") # Translated subheader
@@ -176,7 +186,7 @@ st.sidebar.subheader("Projektgrundwerte") # Translated subheader
 # Reverted: Rely on key for value, keep original units (k€/sqm) in label
 sqm_buy_value_ke = st.sidebar.number_input("Kaufwert (T€/m²)", step=0.05, min_value=0.01, key='disp_buy_val') # Corrected label, removed value=
 sqm_sell_value_ke = st.sidebar.number_input("Verkaufswert (T€/m²)", step=0.05, min_value=0.01, key='disp_sell_val') # Corrected label, removed value=
-total_sqm = st.sidebar.number_input("Gesamtfläche pro Projekt (m²)", step=10.0, min_value=1.0, key='disp_sqm_val') # Keep existing key and value source logic
+total_sqm = st.sidebar.number_input("Wohnfläche (m²)", step=10.0, min_value=1.0, key='disp_sqm_val') # Keep existing key and value source logic
 renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovierungskosten (€/m²)", step=50.0, min_value=0.0, key='disp_reno_val') # Keep existing key and value source logic
 land_transfer_tax_percent = st.sidebar.number_input("Grunderwerbsteuer (% vom Kauf)", step=0.1, min_value=0.0, key='disp_land_tax') # Keep existing key and value source logic
 notary_fee_percent = st.sidebar.number_input("Notargebühr (% vom Kauf)", step=0.1, min_value=0.0, key='disp_notary') # Keep existing key and value source logic
@@ -185,18 +195,20 @@ agent_fee_sale_percent = st.sidebar.number_input("Maklergebühr - Verkauf (% vom
 
 st.sidebar.subheader("Projektzeit & Finanzen") # Translated subheader
 project_duration_months = st.sidebar.number_input("Projektdauer (Monate)", step=1, min_value=1, key='disp_duration') # Keep existing key and value source logic
-
+# Use key for starting capital
+starting_capital_ke = st.sidebar.number_input("Startkapital (T€)", step=1.0, min_value=0.0, key='disp_start_capital') # Use key
 financing_ratio_percent = st.sidebar.slider("Finanzierungsquote (%)", 0, 100, 90, 1, key='disp_finance_ratio') # Keep existing key and value source logic
 interest_rate_percent = st.sidebar.number_input("Zinssatz (% p.a.)", step=0.1, min_value=0.0, key='disp_interest') # Keep existing key and value source logic
-hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ pro Projekt/Monat)", step=10.0, min_value=0.0, key='disp_hausgeld_monthly') # Keep existing key and value source logic
+haugeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ pro Projekt/Monat)", step=10.0, min_value=0.0, key='disp_hausgeld_monthly') # Keep existing key and value source logic
 st.sidebar.metric(label="Steuersatz (%)", value=f"{TAX_RATE_FIXED:.1f}") # Translated label
 
 st.sidebar.subheader("Simulationseinstellungen") # Translated subheader
-duration_jitter_percent = st.sidebar.number_input("Dauerschwankung (% +/-)", value=20.0, step=1.0, min_value=0.0) # Translated label
-sell_price_jitter_percent = st.sidebar.number_input("Verkaufspreisschwankung (% +/-)", value=10.0, step=1.0, min_value=0.0) # Translated label
-total_simulation_months = st.sidebar.number_input("Gesamtsimulationsmonate", value=60, step=1, min_value=1) # Translated label
-num_simulations = st.sidebar.number_input("Anzahl der Simulationen", value=200, step=50, min_value=10) # Translated label
-starting_capital_ke = st.sidebar.number_input("Startkapital (T€)", value=60.0, step=1.0, min_value=0.0) # Translated label, T€, no key needed
+# Use keys for simulation settings
+duration_jitter_percent = st.sidebar.number_input("Dauerschwankung (% +/-)", step=1.0, min_value=0.0, key='disp_dur_jitter') # Use key
+sell_price_jitter_percent = st.sidebar.number_input("Verkaufspreisschwankung (% +/-)", step=1.0, min_value=0.0, key='disp_sell_jitter') # Use key
+total_simulation_months = st.sidebar.number_input("Gesamtsimulationsmonate", step=1, min_value=1, key='disp_sim_months') # Use key
+num_simulations = st.sidebar.number_input("Anzahl der Simulationen", step=50, min_value=10, key='disp_num_sim') # Use key
+# Removed starting capital input from here as it's now under Finance section
 
 # --- Helper Functions for Star Rating ---
 def calculate_star_rating(profit_me: float) -> float:
@@ -236,117 +248,159 @@ def display_star_rating(rating: float):
     stars_html += "</div>"
     st.markdown(stars_html, unsafe_allow_html=True)
 
-# --- Simulation Execution and Results Display ---
-if run_button:
-    st.header("Simulationsergebnisse") # Translated header
-    # Prepare parameters dictionary using the widget state variables
-    # Access values directly via their variable names defined by widgets above
-
-    # Removed the incorrect unit conversions for buy/sell values
-    # The renovation cost conversion IS correct and part of the original logic
-    reno_cost_ke = renovation_cost_per_sqm_eur / 1000.0
-
-    # Calculate total hausgeld for the simulation input
-    total_hausgeld_for_sim_ke = (hausgeld_eur_per_month / 1000.0) * project_duration_months
-
-    params = {
-        "starting_capital_ke": starting_capital_ke,
-        # Use widget values directly (they are already k€/sqm via session state)
-        "sqm_buy_value_ke": sqm_buy_value_ke,
-        "sqm_sell_value_ke": sqm_sell_value_ke,
-        "total_sqm": total_sqm,
-        # Use the correctly converted reno cost
-        "renovation_cost_per_sqm_ke": reno_cost_ke,
-        "project_duration_months": project_duration_months,
-        "financing_ratio_percent": float(financing_ratio_percent),
-        "interest_rate_percent": interest_rate_percent,
-        "tax_rate_percent": TAX_RATE_FIXED,
-        # "hausgeld_eur_per_month": hausgeld_eur_per_month, # Removed
-        "hausgeld_total_per_project_ke": total_hausgeld_for_sim_ke, # Added total
-        "land_transfer_tax_percent": land_transfer_tax_percent,
-        "notary_fee_percent": notary_fee_percent,
-        "agent_fee_purchase_percent": agent_fee_purchase_percent,
-        "agent_fee_sale_percent": agent_fee_sale_percent,
-        "duration_jitter_percent": duration_jitter_percent,
-        "sell_price_jitter_percent": sell_price_jitter_percent,
-        "total_simulation_months": total_simulation_months,
-        "num_simulations": num_simulations
-    }
-
+# --- Simulation Execution Helper ---
+def execute_simulation(params: dict):
+    """Runs the simulation with given parameters and handles errors."""
     try:
-        with st.spinner(f"Führe {num_simulations} Simulationen für {total_simulation_months} Monate durch..."): # Translated spinner text
-            simulation_results = run_monte_carlo_simulations(**params)
-            summary_stats = simulation_results['summary_stats'] # This is a DataFrame
-
-        # Extract final summary stats
-        final_month_stats = summary_stats.iloc[-1]
-
-        # Get values in k€ first
-        assets_mean_ke = final_month_stats.get('Assets_mean', 0.0)
-        assets_std_ke = final_month_stats.get('Assets_std', 0.0)
-        assets_p50_ke = final_month_stats.get('Assets_p50', 0.0)
-        profit_mean_ke = final_month_stats.get('AccumulatedProfit_mean', 0.0)
-        tx_costs_mean_ke = final_month_stats.get('AccumulatedTxCosts_mean', 0.0)
-        # hold_costs_mean_ke = final_month_stats.get('AccumulatedHoldCosts_mean', 0.0) # Old name
-        interest_costs_mean_ke = final_month_stats.get('AccumulatedInterestCosts_mean', 0.0) # New name
-        active_projects_mean = final_month_stats.get('ActiveProjects_mean', 0.0) # Get new value
-
-        # Convert to M€ for display
-        assets_mean_me = assets_mean_ke / 1000.0
-        assets_std_me = assets_std_ke / 1000.0 # Std Dev also scales
-        assets_p50_me = assets_p50_ke / 1000.0
-        profit_mean_me = profit_mean_ke / 1000.0
-        tx_costs_mean_me = tx_costs_mean_ke / 1000.0
-        # hold_costs_mean_me = hold_costs_mean_ke / 1000.0 # Old name
-        interest_costs_mean_me = interest_costs_mean_ke / 1000.0 # New name
-
-        # summary_text = (
-        #     f"Nach {total_simulation_months} Monaten, geschätztes Endvermögen: " # Translated text start
-        #     # f"{assets_mean_me:.2f} Mio. € (Std Dev: {assets_std_me:.2f} Mio. €). " # Using Mio. €
-        #     # f"Median Endvermögen: {assets_p50_me:.2f} Mio. €. " # Translated, Mio. €
-        #     # f"Mittl. kumulierter Gewinn: {profit_mean_me:.2f} Mio. €." # Translated, Mio. €
-        # )
-        # Let's simplify the summary text for now
-        summary_text = f"Ergebnisse nach {total_simulation_months} Monaten."
-
-        st.subheader("Zusammenfassung") # Translated subheader
-        # Calculate and display rating using profit in M€
-        rating = calculate_star_rating(profit_mean_me)
-        display_star_rating(rating)
-        st.write(summary_text)
-
-        # Display additional cost metrics in M€
-        st.metric(label=f"Kumulierter Gewinn über {total_simulation_months} Monate", value=f"{profit_mean_me:.2f} Mio. €") # Translated label, Mio. €
-        # Add Active Projects Metric
-        st.metric(label=f"Mittlere aktive Projekte im Monat {total_simulation_months}", value=f"{active_projects_mean:.1f}") # Translated label
-
-        st.metric(label="Mittl. kum. Transaktionskosten", value=f"{tx_costs_mean_me:.2f} Mio. €") # Translated label, Mio. €
-        # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
-        st.metric(label="Mittl. kum. Zinskosten", value=f"{interest_costs_mean_me:.2f} Mio. €") # New label, Mio. €
-
-        st.subheader("Visualisierungen") # Translated subheader
-
-        # Regenerate plots
-        # Replace asset growth with active projects
-        # asset_growth_fig = plot_asset_growth(summary_stats)
-        # st.plotly_chart(asset_growth_fig, use_container_width=True)
-        active_projects_fig = plot_active_projects(summary_stats)
-        st.plotly_chart(active_projects_fig, use_container_width=True)
-
-        accumulated_profit_fig = plot_accumulated_profit(summary_stats)
-        st.plotly_chart(accumulated_profit_fig, use_container_width=True)
-
-        revenue_fig = plot_monthly_revenue(summary_stats)
-        st.plotly_chart(revenue_fig, use_container_width=True)
-
-        # Optionally display summary stats table (still in k€)
-        with st.expander("Detaillierte Zusammenfassungsstatistiken anzeigen (Tabelle in T€)"): # Translated expander label, T€
-            st.dataframe(summary_stats)
-
+        simulation_results = run_monte_carlo_simulations(**params)
+        return simulation_results['summary_stats'] # Return the DataFrame
     except Exception as e:
-        st.error(f"Während der Simulation ist ein Fehler aufgetreten: {e}") # Translated error message
+        st.error(f"Während der Simulation ist ein Fehler aufgetreten: {e}")
         # Optionally print traceback for debugging:
         # import traceback
         # st.exception(e)
-else:
-    st.info("Passen Sie die Parameter in der Seitenleiste an und klicken Sie auf 'Simulation starten', um die Ergebnisse zu sehen.") # Translated info message 
+        return None
+
+# --- Automatic Deterministic Simulation Run ---
+# This runs on every script execution (initial load, widget change)
+
+def get_current_params(use_full_settings: bool):
+    """Gathers parameters from session state for simulation."""
+    # Use session state values directly via their keys
+    params = {
+        "starting_capital_ke": st.session_state.disp_start_capital,
+        "sqm_buy_value_ke": st.session_state.disp_buy_val,
+        "sqm_sell_value_ke": st.session_state.disp_sell_val,
+        "total_sqm": st.session_state.disp_sqm_val,
+        "renovation_cost_per_sqm_ke": st.session_state.disp_reno_val / 1000.0,
+        "project_duration_months": st.session_state.disp_duration,
+        "financing_ratio_percent": float(st.session_state.disp_finance_ratio),
+        "interest_rate_percent": st.session_state.disp_interest,
+        "tax_rate_percent": TAX_RATE_FIXED,
+        "hausgeld_total_per_project_ke": (st.session_state.disp_hausgeld_monthly / 1000.0) * st.session_state.disp_duration,
+        "land_transfer_tax_percent": st.session_state.disp_land_tax,
+        "notary_fee_percent": st.session_state.disp_notary,
+        "agent_fee_purchase_percent": st.session_state.disp_agent_buy,
+        "agent_fee_sale_percent": st.session_state.disp_agent_sell,
+        "total_simulation_months": st.session_state.disp_sim_months,
+        # Deterministic or Full settings:
+        "duration_jitter_percent": 0.0 if not use_full_settings else st.session_state.disp_dur_jitter,
+        "sell_price_jitter_percent": 0.0 if not use_full_settings else st.session_state.disp_sell_jitter,
+        "num_simulations": 1 if not use_full_settings else st.session_state.disp_num_sim
+    }
+    return params
+
+# Check if we need to run the *initial* deterministic simulation
+# We run it if no results exist OR if the button wasn't just pressed (to avoid double run)
+if st.session_state.latest_summary_stats is None or not run_button:
+    try:
+        current_params = get_current_params(use_full_settings=False)
+        # Only run if params are valid (basic check)
+        if current_params["total_sqm"] > 0 and current_params["sqm_buy_value_ke"] > 0:
+            with st.spinner("Berechne Vorschau..."): # Spinner for preview
+                deterministic_results = execute_simulation(current_params)
+                if deterministic_results is not None:
+                    st.session_state.latest_summary_stats = deterministic_results
+                    st.session_state.is_full_simulation = False
+        # else: Handle invalid param case if needed, maybe clear results?
+        #    st.session_state.latest_summary_stats = None
+    except Exception as e:
+        # Catch potential errors during parameter gathering itself
+        st.warning(f"Fehler bei der Vorbereitung der Vorschau: {e}")
+        st.session_state.latest_summary_stats = None
+
+# --- Manual Full Simulation Trigger ---
+if run_button:
+    # st.header("Simulationsergebnisse") # Header moved to display section
+    try:
+        full_params = get_current_params(use_full_settings=True)
+        if full_params["total_sqm"] > 0 and full_params["sqm_buy_value_ke"] > 0:
+            with st.spinner(f"Führe {full_params['num_simulations']} Simulationen für {full_params['total_simulation_months']} Monate durch..."): # Use params in spinner
+                full_results = execute_simulation(full_params)
+                if full_results is not None:
+                    st.session_state.latest_summary_stats = full_results
+                    st.session_state.is_full_simulation = True
+                # else: Error handled within execute_simulation
+        # else: Handle invalid param case? Maybe show warning?
+        #    st.warning("Ungültige Parameter für die vollständige Simulation.")
+    except Exception as e:
+        st.error(f"Fehler beim Starten der vollständigen Simulation: {e}")
+        # Optionally reset state?
+        # st.session_state.latest_summary_stats = None
+
+# --- Results Display ---
+# Always attempt to display results from session state
+if st.session_state.latest_summary_stats is not None:
+    summary_stats = st.session_state.latest_summary_stats
+    is_full_sim = st.session_state.is_full_simulation
+
+    # Display appropriate header
+    if is_full_sim:
+        st.header("Simulationsergebnisse (Monte Carlo)")
+        num_sim = st.session_state.disp_num_sim # Get actual number used
+        sim_months = st.session_state.disp_sim_months
+        spinner_text_base = f"Führe {num_sim} Simulationen für {sim_months} Monate durch..."
+    else:
+        st.header("Vorschau (Deterministisch)")
+        sim_months = st.session_state.disp_sim_months
+        spinner_text_base = f"Berechne Vorschau für {sim_months} Monate..."
+
+    # Extract final summary stats from the DataFrame in state
+    final_month_stats = summary_stats.iloc[-1]
+
+    # Get values in k€ first
+    assets_mean_ke = final_month_stats.get('Assets_mean', 0.0)
+    assets_std_ke = final_month_stats.get('Assets_std', 0.0)
+    assets_p50_ke = final_month_stats.get('Assets_p50', 0.0)
+    profit_mean_ke = final_month_stats.get('AccumulatedProfit_mean', 0.0)
+    tx_costs_mean_ke = final_month_stats.get('AccumulatedTxCosts_mean', 0.0)
+    # hold_costs_mean_ke = final_month_stats.get('AccumulatedHoldCosts_mean', 0.0) # Old name
+    interest_costs_mean_ke = final_month_stats.get('AccumulatedInterestCosts_mean', 0.0) # New name
+    active_projects_mean = final_month_stats.get('ActiveProjects_mean', 0.0) # Get new value
+
+    # Convert to M€ for display
+    assets_mean_me = assets_mean_ke / 1000.0
+    assets_std_me = assets_std_ke / 1000.0 # Std Dev also scales
+    assets_p50_me = assets_p50_ke / 1000.0
+    profit_mean_me = profit_mean_ke / 1000.0
+    tx_costs_mean_me = tx_costs_mean_ke / 1000.0
+    # hold_costs_mean_me = hold_costs_mean_ke / 1000.0 # Old name
+    interest_costs_mean_me = interest_costs_mean_ke / 1000.0 # New name
+
+    # Simplified summary text for now
+    # summary_text = f"Ergebnisse nach {sim_months} Monaten."
+
+    st.subheader("Zusammenfassung") # Translated subheader
+    # Calculate and display rating using profit in M€
+    rating = calculate_star_rating(profit_mean_me)
+    display_star_rating(rating)
+    # st.write(summary_text) # Can remove or keep this simple text
+
+    # Display additional cost metrics in M€
+    st.metric(label=f"Kumulierter Gewinn über {sim_months} Monate", value=f"{profit_mean_me:.2f} Mio. €") # Use sim_months
+    # Add Active Projects Metric
+    st.metric(label=f"Mittlere aktive Projekte im Monat {sim_months}", value=f"{active_projects_mean:.1f}") # Use sim_months
+
+    st.metric(label="Mittl. kum. Transaktionskosten", value=f"{tx_costs_mean_me:.2f} Mio. €") # Translated label, Mio. €
+    # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
+    st.metric(label="Mittl. kum. Zinskosten", value=f"{interest_costs_mean_me:.2f} Mio. €") # New label, Mio. €
+
+    st.subheader("Visualisierungen") # Translated subheader
+
+    # Regenerate plots using data from state
+    # Replace asset growth with active projects
+    active_projects_fig = plot_active_projects(summary_stats)
+    st.plotly_chart(active_projects_fig, use_container_width=True)
+
+    accumulated_profit_fig = plot_accumulated_profit(summary_stats)
+    st.plotly_chart(accumulated_profit_fig, use_container_width=True)
+
+    revenue_fig = plot_monthly_revenue(summary_stats)
+    st.plotly_chart(revenue_fig, use_container_width=True)
+
+    # Optionally display summary stats table (still in k€)
+    with st.expander("Detaillierte Zusammenfassungsstatistiken anzeigen (Tabelle in T€)"): # Translated expander label, T€
+        st.dataframe(summary_stats) # Display the data from state
+
+else: # Display info message if no results are available in state
+    st.info("Passen Sie die Parameter in der Seitenleiste an. Eine Vorschau wird automatisch berechnet. Klicken Sie auf 'Simulation starten' für die vollständige Monte-Carlo-Simulation.") # Updated info message 
