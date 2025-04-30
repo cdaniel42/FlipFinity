@@ -2,6 +2,7 @@
 File: streamlit_app.py
 Description: Streamlit application for the FlipFinity Business Simulator.
 Provides a web interface to input parameters, run simulations, and view results.
+German: Stellt eine Weboberfläche zur Eingabe von Parametern, zur Durchführung von Simulationen und zur Anzeige von Ergebnissen bereit.
 """
 
 import streamlit as st
@@ -14,12 +15,12 @@ from visualization import plot_active_projects, plot_accumulated_profit, plot_mo
 
 st.set_page_config(layout="wide", initial_sidebar_state="expanded") # Use wide layout & expanded sidebar
 
-st.title("FlipFinity Business Simulator")
+st.title("FlipFinity Unternehmenssimulator") # Translated title
 
-st.sidebar.header("Simulation Parameters")
+st.sidebar.header("Simulationsparameter") # Translated header
 
 # --- Run Button (Top) ---
-run_button = st.sidebar.button("Run Simulation", key='run_sim_button_top')
+run_button = st.sidebar.button("Simulation starten", key='run_sim_button_top') # Translated button
 
 # --- Initialize Session State for Calculation Inputs (if not already set) ---
 def initialize_state_if_missing(key, default_value):
@@ -40,7 +41,7 @@ initialize_state_if_missing('disp_interest', 5.0)
 initialize_state_if_missing('disp_hausgeld_monthly', 400.0) # Add Hausgeld
 
 # --- Display Calculated Values (Below Button - Reads from initialized state) ---
-st.sidebar.subheader("Calculated Totals per Project")
+st.sidebar.subheader("Berechnete Summen pro Projekt") # Translated subheader
 # Now directly access state, it's guaranteed to exist
 sqm_buy_value_ke_disp = st.session_state['disp_buy_val']
 sqm_sell_value_ke_disp = st.session_state['disp_sell_val']
@@ -120,86 +121,88 @@ if all_vars_valid:
     # --- Display Rows --- (Using the newly calculated values)
     # Row 1: Project Cost | Capital Invest
     colA, colB = st.sidebar.columns(2)
-    colA.metric(label="Total Project Cost", value=f"{total_project_cost_ke:.1f} k€") # Step 6
-    colB.metric(label="Est. Capital Invest", value=f"{total_capital_invest_ke:.1f} k€") # Step 7
+    colA.metric(label="Gesamtprojektkosten", value=f"{total_project_cost_ke:.1f} T€") # Step 6, Translated label, T€
+    colB.metric(label="Gesch. Kapitaleinsatz", value=f"{total_capital_invest_ke:.1f} T€") # Step 7, Translated label, T€
 
     # Row 2: Buy Value | Sell Value
     col1, col2 = st.sidebar.columns(2)
-    col1.metric(label="Total Buy Value", value=f"{buy_value_ke:.0f} k€") # Step 1
-    col2.metric(label="Total Sell Value", value=f"{sell_value_ke:.0f} k€") # Step 1
+    col1.metric(label="Gesamtkaufwert", value=f"{buy_value_ke:.0f} T€") # Step 1, Translated label, T€
+    col2.metric(label="Gesamtverkaufswert", value=f"{sell_value_ke:.0f} T€") # Step 1, Translated label, T€
 
     # Row 3: Reno Cost | Add. Costs
     col3, col4 = st.sidebar.columns(2)
-    col3.metric(label="Total Reno Cost", value=f"{reno_cost_ke:.1f} k€") # Step 1
-    col4.metric(label="Total Add. Costs", value=f"{total_additional_costs_ke:.1f} k€") # Step 5
+    col3.metric(label="Gesamtrenovierungskosten", value=f"{reno_cost_ke:.1f} T€") # Step 1, Translated label, T€
+    col4.metric(label="Gesamtnebenkosten", value=f"{total_additional_costs_ke:.1f} T€") # Step 5, Translated label, T€
 
     # Row 4: Margins
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin Before Tax", value=f"{margin_percent_before_tax:.1f} %") # Step 10
-    col6.metric(label="Margin After Tax", value=f"{margin_percent_after_tax:.1f} %") # Step 10
+    col5.metric(label="Marge vor Steuern", value=f"{margin_percent_before_tax:.1f} %") # Step 10, Translated label
+    col6.metric(label="Marge nach Steuern", value=f"{margin_percent_after_tax:.1f} %") # Step 10, Translated label
 
     # Row 5: Profits
     col7, col8 = st.sidebar.columns(2)
-    col7.metric(label="Profit Before Tax", value=f"{profit_before_tax_ke:.1f} k€") # Step 8
-    col8.metric(label="Profit After Tax", value=f"{profit_after_tax_ke:.1f} k€") # Step 9
+    col7.metric(label="Gewinn vor Steuern", value=f"{profit_before_tax_ke:.1f} T€") # Step 8, Translated label, T€
+    col8.metric(label="Gewinn nach Steuern", value=f"{profit_after_tax_ke:.1f} T€") # Step 9, Translated label, T€
 
 else:
     # Placeholder display
     colA, colB = st.sidebar.columns(2)
-    colA.metric(label="Total Project Cost", value="...")
-    colB.metric(label="Est. Capital Invest", value="...")
+    colA.metric(label="Gesamtprojektkosten", value="...") # Translated label
+    colB.metric(label="Gesch. Kapitaleinsatz", value="...") # Translated label
 
     col1, col2 = st.sidebar.columns(2)
-    col1.metric(label="Total Buy Value", value="...")
-    col2.metric(label="Total Sell Value", value="...")
+    col1.metric(label="Gesamtkaufwert", value="...") # Translated label
+    col2.metric(label="Gesamtverkaufswert", value="...") # Translated label
 
     col3, col4 = st.sidebar.columns(2)
-    col3.metric(label="Total Reno Cost", value="...")
-    col4.metric(label="Total Add. Costs", value="...")
+    col3.metric(label="Gesamtrenovierungskosten", value="...") # Translated label
+    col4.metric(label="Gesamtnebenkosten", value="...") # Translated label
 
     # Placeholder Row 4: Margins
     col5, col6 = st.sidebar.columns(2)
-    col5.metric(label="Margin Before Tax", value="...")
-    col6.metric(label="Margin After Tax", value="...")
+    col5.metric(label="Marge vor Steuern", value="...") # Translated label
+    col6.metric(label="Marge nach Steuern", value="...") # Translated label
 
     # Placeholder Row 5: Profits
     col7, col8 = st.sidebar.columns(2)
-    col7.metric(label="Profit Before Tax", value="...")
-    col8.metric(label="Profit After Tax", value="...")
+    col7.metric(label="Gewinn vor Steuern", value="...") # Translated label
+    col8.metric(label="Gewinn nach Steuern", value="...") # Translated label
 
 st.sidebar.markdown("---") # Separator
 
 # --- Input Widgets (All grouped below separator) ---
 # Define widgets with keys used above for state initialization/access
-st.sidebar.subheader("Project Base Values")
-sqm_buy_value_ke = st.sidebar.number_input("SqM Buy Value (k€/sqm)", value=2.25, step=0.05, min_value=0.01, key='disp_buy_val')
-sqm_sell_value_ke = st.sidebar.number_input("SqM Sell Value (k€/sqm)", value=4.0, step=0.05, min_value=0.01, key='disp_sell_val')
-total_sqm = st.sidebar.number_input("Total SqM per Project", value=84.0, step=10.0, min_value=1.0, key='disp_sqm_val')
-renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovation Cost (€/sqm)", value=600.0, step=50.0, min_value=0.0, key='disp_reno_val')
-land_transfer_tax_percent = st.sidebar.number_input("Land Transfer Tax (% of Buy)", value=6.5, step=0.1, min_value=0.0, key='disp_land_tax')
-notary_fee_percent = st.sidebar.number_input("Notary Fee (% of Buy)", value=1.5, step=0.1, min_value=0.0, key='disp_notary')
-agent_fee_purchase_percent = st.sidebar.number_input("Agent Fee - Purchase (% of Buy)", value=3.57, step=0.1, min_value=0.0, key='disp_agent_buy')
-agent_fee_sale_percent = st.sidebar.number_input("Agent Fee - Sale (% of Sell)", value=0.0, step=0.1, min_value=0.0, key='disp_agent_sell')
+st.sidebar.subheader("Projektgrundwerte") # Translated subheader
+# Reverted: Rely on key for value, keep original units (k€/sqm) in label
+sqm_buy_value_ke = st.sidebar.number_input("Kaufwert (T€/m²)", step=0.05, min_value=0.01, key='disp_buy_val') # Corrected label, removed value=
+sqm_sell_value_ke = st.sidebar.number_input("Verkaufswert (T€/m²)", step=0.05, min_value=0.01, key='disp_sell_val') # Corrected label, removed value=
+total_sqm = st.sidebar.number_input("Gesamtfläche pro Projekt (m²)", step=10.0, min_value=1.0, key='disp_sqm_val') # Keep existing key and value source logic
+renovation_cost_per_sqm_eur = st.sidebar.number_input("Renovierungskosten (€/m²)", step=50.0, min_value=0.0, key='disp_reno_val') # Keep existing key and value source logic
+land_transfer_tax_percent = st.sidebar.number_input("Grunderwerbsteuer (% vom Kauf)", step=0.1, min_value=0.0, key='disp_land_tax') # Keep existing key and value source logic
+notary_fee_percent = st.sidebar.number_input("Notargebühr (% vom Kauf)", step=0.1, min_value=0.0, key='disp_notary') # Keep existing key and value source logic
+agent_fee_purchase_percent = st.sidebar.number_input("Maklergebühr - Kauf (% vom Kauf)", step=0.1, min_value=0.0, key='disp_agent_buy') # Keep existing key and value source logic
+agent_fee_sale_percent = st.sidebar.number_input("Maklergebühr - Verkauf (% vom Verkauf)", step=0.1, min_value=0.0, key='disp_agent_sell') # Keep existing key and value source logic
 
-st.sidebar.subheader("Project Timing & Finance")
-project_duration_months = st.sidebar.number_input("Project Duration (months)", value=9, step=1, min_value=1, key='disp_duration')
-starting_capital_ke = st.sidebar.number_input("Starting Capital (k€)", value=60.0, step=1.0, min_value=0.0) # No key needed if not used for dynamic display
-financing_ratio_percent = st.sidebar.slider("Financing Ratio (%)", 0, 100, 90, 1, key='disp_finance_ratio')
-interest_rate_percent = st.sidebar.number_input("Interest Rate (% annual)", value=5.0, step=0.1, min_value=0.0, key='disp_interest')
-hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ per Project/Month)", value=400.0, step=10.0, min_value=0.0, key='disp_hausgeld_monthly') # Updated Key
-st.sidebar.metric(label="Tax Rate (%)", value=f"{TAX_RATE_FIXED:.1f}")
+st.sidebar.subheader("Projektzeit & Finanzen") # Translated subheader
+project_duration_months = st.sidebar.number_input("Projektdauer (Monate)", step=1, min_value=1, key='disp_duration') # Keep existing key and value source logic
 
-st.sidebar.subheader("Simulation Settings")
-duration_jitter_percent = st.sidebar.number_input("Duration Jitter (% +/-)", value=20.0, step=1.0, min_value=0.0)
-sell_price_jitter_percent = st.sidebar.number_input("Sell Price Jitter (% +/-)", value=10.0, step=1.0, min_value=0.0)
-total_simulation_months = st.sidebar.number_input("Total Simulation Months", value=60, step=1, min_value=1)
-num_simulations = st.sidebar.number_input("Number of Simulations", value=200, step=50, min_value=10)
+financing_ratio_percent = st.sidebar.slider("Finanzierungsquote (%)", 0, 100, 90, 1, key='disp_finance_ratio') # Keep existing key and value source logic
+interest_rate_percent = st.sidebar.number_input("Zinssatz (% p.a.)", step=0.1, min_value=0.0, key='disp_interest') # Keep existing key and value source logic
+hausgeld_eur_per_month = st.sidebar.number_input("Hausgeld (€ pro Projekt/Monat)", step=10.0, min_value=0.0, key='disp_hausgeld_monthly') # Keep existing key and value source logic
+st.sidebar.metric(label="Steuersatz (%)", value=f"{TAX_RATE_FIXED:.1f}") # Translated label
+
+st.sidebar.subheader("Simulationseinstellungen") # Translated subheader
+duration_jitter_percent = st.sidebar.number_input("Dauerschwankung (% +/-)", value=20.0, step=1.0, min_value=0.0) # Translated label
+sell_price_jitter_percent = st.sidebar.number_input("Verkaufspreisschwankung (% +/-)", value=10.0, step=1.0, min_value=0.0) # Translated label
+total_simulation_months = st.sidebar.number_input("Gesamtsimulationsmonate", value=60, step=1, min_value=1) # Translated label
+num_simulations = st.sidebar.number_input("Anzahl der Simulationen", value=200, step=50, min_value=10) # Translated label
+starting_capital_ke = st.sidebar.number_input("Startkapital (T€)", value=60.0, step=1.0, min_value=0.0) # Translated label, T€, no key needed
 
 # --- Helper Functions for Star Rating ---
 def calculate_star_rating(profit_me: float) -> float:
     """Maps final accumulated profit (in M€) to a star rating (1.0 to 5.0)."""
-    min_profit_me = 0.05  # 50 k€ = 0.05 M€ => 1 star
-    max_profit_me = 10.0  # 10,000 k€ = 10 M€ => 5 stars
+    min_profit_me = 1.0  # 1 M€ => 1 star
+    max_profit_me = 50.0  # 50 M€ => 5 stars
 
     if profit_me <= min_profit_me:
         return 1.0
@@ -235,19 +238,25 @@ def display_star_rating(rating: float):
 
 # --- Simulation Execution and Results Display ---
 if run_button:
-    st.header("Simulation Results")
+    st.header("Simulationsergebnisse") # Translated header
     # Prepare parameters dictionary using the widget state variables
     # Access values directly via their variable names defined by widgets above
+
+    # Removed the incorrect unit conversions for buy/sell values
+    # The renovation cost conversion IS correct and part of the original logic
+    reno_cost_ke = renovation_cost_per_sqm_eur / 1000.0
 
     # Calculate total hausgeld for the simulation input
     total_hausgeld_for_sim_ke = (hausgeld_eur_per_month / 1000.0) * project_duration_months
 
     params = {
         "starting_capital_ke": starting_capital_ke,
+        # Use widget values directly (they are already k€/sqm via session state)
         "sqm_buy_value_ke": sqm_buy_value_ke,
         "sqm_sell_value_ke": sqm_sell_value_ke,
         "total_sqm": total_sqm,
-        "renovation_cost_per_sqm_ke": renovation_cost_per_sqm_eur / 1000.0,
+        # Use the correctly converted reno cost
+        "renovation_cost_per_sqm_ke": reno_cost_ke,
         "project_duration_months": project_duration_months,
         "financing_ratio_percent": float(financing_ratio_percent),
         "interest_rate_percent": interest_rate_percent,
@@ -265,7 +274,7 @@ if run_button:
     }
 
     try:
-        with st.spinner(f"Running {num_simulations} simulations for {total_simulation_months} months..."):
+        with st.spinner(f"Führe {num_simulations} Simulationen für {total_simulation_months} Monate durch..."): # Translated spinner text
             simulation_results = run_monte_carlo_simulations(**params)
             summary_stats = simulation_results['summary_stats'] # This is a DataFrame
 
@@ -291,29 +300,31 @@ if run_button:
         # hold_costs_mean_me = hold_costs_mean_ke / 1000.0 # Old name
         interest_costs_mean_me = interest_costs_mean_ke / 1000.0 # New name
 
-        summary_text = (
-            f"After {total_simulation_months} months, estimated final assets: "
-            # f"{assets_mean_me:.2f} M€ (Std Dev: {assets_std_me:.2f} M€). "
-            # f"Median final assets: {assets_p50_me:.2f} M€. "
-            # f"Mean Accumulated Profit: {profit_mean_me:.2f} M€."
-        )
+        # summary_text = (
+        #     f"Nach {total_simulation_months} Monaten, geschätztes Endvermögen: " # Translated text start
+        #     # f"{assets_mean_me:.2f} Mio. € (Std Dev: {assets_std_me:.2f} Mio. €). " # Using Mio. €
+        #     # f"Median Endvermögen: {assets_p50_me:.2f} Mio. €. " # Translated, Mio. €
+        #     # f"Mittl. kumulierter Gewinn: {profit_mean_me:.2f} Mio. €." # Translated, Mio. €
+        # )
+        # Let's simplify the summary text for now
+        summary_text = f"Ergebnisse nach {total_simulation_months} Monaten."
 
-        st.subheader("Summary")
+        st.subheader("Zusammenfassung") # Translated subheader
         # Calculate and display rating using profit in M€
         rating = calculate_star_rating(profit_mean_me)
         display_star_rating(rating)
         st.write(summary_text)
 
         # Display additional cost metrics in M€
-        st.metric(label=f"Accumulated Profit over {total_simulation_months} months", value=f"{profit_mean_me:.2f} M€")
+        st.metric(label=f"Kumulierter Gewinn über {total_simulation_months} Monate", value=f"{profit_mean_me:.2f} Mio. €") # Translated label, Mio. €
         # Add Active Projects Metric
-        st.metric(label=f"Mean Active Projects at Month {total_simulation_months}", value=f"{active_projects_mean:.1f}") # Display new metric
+        st.metric(label=f"Mittlere aktive Projekte im Monat {total_simulation_months}", value=f"{active_projects_mean:.1f}") # Translated label
 
-        st.metric(label="Mean Acc. Transaction Costs", value=f"{tx_costs_mean_me:.2f} M€")
+        st.metric(label="Mittl. kum. Transaktionskosten", value=f"{tx_costs_mean_me:.2f} Mio. €") # Translated label, Mio. €
         # st.metric(label="Mean Acc. Holding Costs (Interest + Hausgeld)", value=f"{hold_costs_mean_me:.3f} M€") # Old label
-        st.metric(label="Mean Acc. Interest Costs", value=f"{interest_costs_mean_me:.2f} M€") # New label
+        st.metric(label="Mittl. kum. Zinskosten", value=f"{interest_costs_mean_me:.2f} Mio. €") # New label, Mio. €
 
-        st.subheader("Visualizations")
+        st.subheader("Visualisierungen") # Translated subheader
 
         # Regenerate plots
         # Replace asset growth with active projects
@@ -329,13 +340,13 @@ if run_button:
         st.plotly_chart(revenue_fig, use_container_width=True)
 
         # Optionally display summary stats table (still in k€)
-        with st.expander("View Detailed Summary Statistics (Table in k€)"):
+        with st.expander("Detaillierte Zusammenfassungsstatistiken anzeigen (Tabelle in T€)"): # Translated expander label, T€
             st.dataframe(summary_stats)
 
     except Exception as e:
-        st.error(f"An error occurred during simulation: {e}")
+        st.error(f"Während der Simulation ist ein Fehler aufgetreten: {e}") # Translated error message
         # Optionally print traceback for debugging:
         # import traceback
         # st.exception(e)
 else:
-    st.info("Adjust parameters in the sidebar and click 'Run Simulation' to see the results.") 
+    st.info("Passen Sie die Parameter in der Seitenleiste an und klicken Sie auf 'Simulation starten', um die Ergebnisse zu sehen.") # Translated info message 
